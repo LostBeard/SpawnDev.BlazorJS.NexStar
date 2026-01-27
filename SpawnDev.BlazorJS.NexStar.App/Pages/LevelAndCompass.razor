@@ -89,32 +89,6 @@
                 </div>
             </section>
 
-            <!-- Actions -->
-            <section class="panel actions-panel">
-                <h2>Actions</h2>
-                @if (NexStar.ComsEnabled)
-                {
-                    <div class="action-info">
-                        <p>Connected to <strong>@NexStar.Model.GetDisplayName()</strong></p>
-                    </div>
-                    <button class="btn btn-warning" @onclick="ResetAzAlt" disabled="@_isLoading">
-                        🎯 Set Az/Alt to 0°, 0°
-                    </button>
-                    <p class="hint">This tells the telescope that it is currently pointing at Azimuth 0° (North) and Altitude 0° (Horizon).</p>
-                }
-                else
-                {
-                    <div class="action-info muted">
-                        <p>🔌 Telescope not connected</p>
-                        <p class="hint">Connect on the Home page to enable the reset function.</p>
-                    </div>
-                }
-                @if (!string.IsNullOrEmpty(_statusMessage))
-                {
-                    <div class="status-message @_statusClass">@_statusMessage</div>
-                }
-            </section>
-
             <!-- Instructions -->
             <section class="panel instructions-panel">
                 <h2>Instructions</h2>
@@ -122,7 +96,7 @@
                     <li>Attach your phone to the telescope tube.</li>
                     <li>Use the <strong>Compass</strong> to point the tube <strong>North</strong> (Az = 0°).</li>
                     <li>Use the <strong>Level</strong> to make the tube <strong>horizontal</strong> (Alt = 0°).</li>
-                    <li>Click <strong>"Set Az/Alt to 0°, 0°"</strong> to reset the telescope's internal position.</li>
+                    <li>Power cycle your telescope to reset the internal position to Az = 0°, Alt = 0°.</li>
                     <li>Your scope now has a rough alignment starting point!</li>
                 </ol>
             </section>
