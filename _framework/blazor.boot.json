@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.BlazorJS.NexStar.App",
   "resources": {
-    "hash": "sha256-aDvg90xFfYX7BEQ7RSbp8ugcAeCg+9spJPoa9qxvTVE=",
+    "hash": "sha256-2ZyD6NluHZ41Nm5YVsDH9Mj8CTmJ8ydpZyzI7t8a3pI=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-ZWhb+SSdHAX4/G33dbUw7PEClIBLZaq3ksgj3zdO0VU="
     },
@@ -62,8 +62,8 @@
       "System.Threading.wasm": "sha256-fTT1JVFakUJIVVI1lWTVp9WavtykFH+A/PDNPgHwNZk=",
       "System.wasm": "sha256-jXhnUNHzjjL7Plo7WcHuX7V5Dc/Umt+qmGGC+Js76SE=",
       "System.Private.CoreLib.wasm": "sha256-TlxxjDGLPdo67E2g/37ximb4hstPNiZ0GUTRWdfzHe0=",
-      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-tcJDO0EvsoW9Z/SDk1rZGVS/s7iUgx+woh7vHhAafCs=",
-      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-VH0+fkOPTDT31pWnVcFBlPWGkmAVs/TeBy+JyGQWS5o="
+      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-t3Vao+S4rOmYyQJLJIQjMyDhxJfL94znpNt4RNrkJL0=",
+      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-WRKHFbUMFUUVm6/HT4DMS5XCJcS+uBeajXZGmr4ytCY="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-9suC9LCVB+Qavj4prBgl/ufjjFZIUypz8Imx/0r5LsI="
