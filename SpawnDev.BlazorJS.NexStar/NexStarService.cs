@@ -190,7 +190,8 @@ namespace SpawnDev.BlazorJS.NexStar
                 var isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);
 
                 // Check if USB API is available (required for polyfill)
-                var hasUsb = JS.Get<bool>("!!navigator.usb");
+                using var usb = JS.Get<USB>("navigator.usb");
+                var hasUsb = usb != null;
 
                 // Android Chrome usually has navigator.serial but lacks drivers for USB serial.
                 // so we force the polyfill if on Android and USB is available.
