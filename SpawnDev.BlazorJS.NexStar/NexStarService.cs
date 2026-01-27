@@ -15,7 +15,6 @@ namespace SpawnDev.BlazorJS.NexStar
         private CancellationTokenSource? CancelComsTokenSource = null;
         private Navigator navigator;
         private WritableStreamDefaultWriter? Writer = null;
-        private ReadableStreamDefaultReader? Reader = null;
         private Task? ReadingTask = null;
         private BlazorJSRuntime JS;
         private Task? _Ready = null;
@@ -193,7 +192,7 @@ namespace SpawnDev.BlazorJS.NexStar
                 {
                     Filters = new[]
                     {
-                        new SerialPortRequestFilter { UsbVendorId = ProlificVendorId }
+                        new SerialPortFilter { UsbVendorId = ProlificVendorId }
                     }
                 });
             }
