@@ -118,10 +118,10 @@ namespace SpawnDev.BlazorJS.NexStar
             // Calculate azimuth
             double cosAz = (Math.Sin(decRad) - Math.Sin(latRad) * sinAlt) /
                           (Math.Cos(latRad) * Math.Cos(altitude * DEG_TO_RAD));
-            
+
             // Clamp to avoid NaN from floating point errors
             cosAz = Math.Max(-1, Math.Min(1, cosAz));
-            
+
             double azimuth = Math.Acos(cosAz) * RAD_TO_DEG;
 
             // Adjust azimuth based on hour angle
@@ -197,7 +197,7 @@ namespace SpawnDev.BlazorJS.NexStar
 
             double cosSep = Math.Sin(dec1Rad) * Math.Sin(dec2Rad) +
                            Math.Cos(dec1Rad) * Math.Cos(dec2Rad) * Math.Cos(ra1Rad - ra2Rad);
-            
+
             cosSep = Math.Max(-1, Math.Min(1, cosSep));
             return Math.Acos(cosSep) * RAD_TO_DEG;
         }

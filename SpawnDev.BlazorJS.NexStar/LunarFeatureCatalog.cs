@@ -67,7 +67,7 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <summary>
         /// Get mountains only
         /// </summary>
-        public static IEnumerable<MoonFeature> Mountains => Features.Where(f => 
+        public static IEnumerable<MoonFeature> Mountains => Features.Where(f =>
             f.Type == "Mons" || f.Type == "Mountain" || f.Type == "Montes");
 
         private static List<MoonFeature> InitializeFeatures()

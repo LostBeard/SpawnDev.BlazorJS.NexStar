@@ -175,6 +175,58 @@ namespace SpawnDev.BlazorJS.NexStar
 
         #endregion
 
+        #region Initialization
+
+        /// <summary>
+        /// Initializes the service, loading polyfills if necessary (e.g. for Android)
+        /// </summary>
+        private async Task InitAsync()
+        {
+            if (!JS.IsBrowser) return;
+
+            try
+            {
+                var userAgent = JS.Get<string>("navigator.userAgent");
+                var isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);
+
+                // Check if USB API is available (required for polyfill)
+                var hasUsb = JS.Get<bool>("!!navigator.usb");
+
+                // Android Chrome usually has navigator.serial but lacks drivers for USB serial.
+                // so we force the polyfill if on Android and USB is available.
+                if (isAndroid && hasUsb)
+                {
+                    // Load the polyfill module using the library content path
+                    using var polyfillModule = await JS.Import("./_content/SpawnDev.BlazorJS.NexStar/serial.js");
+
+                    // Get the exported 'serial' object
+                    var polyfillSerial = polyfillModule.GetExport<Serial>("serial");
+
+                    if (polyfillSerial != null)
+                    {
+                        // Replace the native Serial instance (or null) with the polyfill
+                        if (Serial != null)
+                        {
+                            Serial.OnConnect -= Serial_OnConnect;
+                            Serial.Dispose();
+                        }
+
+                        Serial = polyfillSerial;
+                        Serial.OnConnect += Serial_OnConnect;
+                        Console.WriteLine("Web Serial Polyfill loaded for Android.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Web Serial Polyfill init failed: {ex.Message}");
+            }
+
+            await UpdateAsync();
+        }
+
+        #endregion
+
         #region Port Selection & Connection
 
         /// <summary>
@@ -461,7 +513,7 @@ namespace SpawnDev.BlazorJS.NexStar
                             lock (_responseLock)
                             {
                                 _responseBuffer.AddRange(bytes);
-                                
+
                                 // Check for terminator
                                 int terminatorIndex = _responseBuffer.IndexOf((byte)'#');
                                 if (terminatorIndex >= 0 && _pendingResponse != null)
@@ -521,8 +573,8 @@ namespace SpawnDev.BlazorJS.NexStar
             if (response == null || response.Length < 2) return TelescopeModel.Unknown;
 
             var modelId = response[0];
-            Model = Enum.IsDefined(typeof(TelescopeModel), (int)modelId) 
-                ? (TelescopeModel)modelId 
+            Model = Enum.IsDefined(typeof(TelescopeModel), (int)modelId)
+                ? (TelescopeModel)modelId
                 : TelescopeModel.Unknown;
             OnStatusChanged?.Invoke();
             return Model;
@@ -795,7 +847,7 @@ namespace SpawnDev.BlazorJS.NexStar
         public IEnumerable<CelestialObject> GetVisibleQuickTargets(DateTime? currentTime = null)
         {
             var candidates = new List<CelestialObject>();
-            
+
             // Popular Bright Stars
             var starNames = new[] { "Polaris", "Sirius", "Vega", "Rigel", "Betelgeuse", "Arcturus", "Capella", "Altair", "Aldebaran", "Antares", "Spica" };
             foreach (var name in starNames)
@@ -821,14 +873,15 @@ namespace SpawnDev.BlazorJS.NexStar
             }
 
             var time = currentTime ?? DateTime.UtcNow;
-            
+
             // Filter by visibility (> 0 degrees altitude) and return sorted by altitude
             return candidates
-                .Select(obj => new { 
-                    Obj = obj, 
+                .Select(obj => new
+                {
+                    Obj = obj,
                     AltAz = AstronomyMath.EquatorialToHorizontal(
-                        obj.RightAscension, obj.Declination, 
-                        Location.Latitude, Location.Longitude, time) 
+                        obj.RightAscension, obj.Declination,
+                        Location.Latitude, Location.Longitude, time)
                 })
                 .Where(x => x.AltAz.Altitude > 10) // Only objects > 10° above horizon
                 .OrderByDescending(x => x.AltAz.Altitude) // Highest objects first
@@ -842,10 +895,7 @@ namespace SpawnDev.BlazorJS.NexStar
 
         #region Event Handlers
 
-        private async Task InitAsync()
-        {
-            await UpdateAsync();
-        }
+
 
         private async Task UpdateAsync()
         {

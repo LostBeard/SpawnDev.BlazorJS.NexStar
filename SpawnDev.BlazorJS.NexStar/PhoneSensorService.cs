@@ -1,4 +1,3 @@
-using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.JSObjects;
 using System.Numerics;
 
@@ -55,10 +54,10 @@ namespace SpawnDev.BlazorJS.NexStar
             // We can check if `DeviceOrientationEvent` exists and has `requestPermission` property
             try
             {
-               if (DeviceOrientationEvent.RequestPermissionSupported)
-               {
-                   _requiresRequestPermission = true;
-               }
+                if (DeviceOrientationEvent.RequestPermissionSupported)
+                {
+                    _requiresRequestPermission = true;
+                }
             }
             catch
             {
@@ -144,7 +143,7 @@ namespace SpawnDev.BlazorJS.NexStar
         private void OnDeviceOrientationAbsolute(DeviceOrientationEvent e)
         {
             if (e.Alpha == null || e.Beta == null || e.Gamma == null) return;
-            
+
             UpdateOrientation((double)e.Alpha, (double)e.Beta, (double)e.Gamma, true);
         }
 
@@ -154,7 +153,7 @@ namespace SpawnDev.BlazorJS.NexStar
             // to avoid jittering between two sources.
             // Note: Event.TimeStamp is a DOMHighResTimeStamp (double milliseconds)
             // But we can just use simple wall clock or rely on the fact that if absolute is firing, we prefer it.
-            
+
             // Checking if we have valid data
             double alpha = 0;
 
@@ -167,7 +166,7 @@ namespace SpawnDev.BlazorJS.NexStar
                 // iOS: Alpha is 0 when device is initialized, not North.
                 // webkitCompassHeading is the heading relative to magnetic north.
                 // We should use that as "Alpha" for our purposes if available.
-                alpha = heading.Value; 
+                alpha = heading.Value;
                 // Note: orientation conventions might differ. 
                 // Alpha typically: 0=North, 90=East (counter-clockwise?) No, standard is 0=North, 90=East?
                 // Web API: 0=North, increasing counter-clockwise usually.
@@ -177,8 +176,8 @@ namespace SpawnDev.BlazorJS.NexStar
                 // Actually MDN says: "alpha... is a value in degrees... motion of the device around the z axis... 0 is north... counter-clockwise"
                 // CompasHeading: "degrees... clockwise"
                 // So Alpha_standard ~= 360 - CompassHeading
-                
-                alpha = (360 - alpha) % 360; 
+
+                alpha = (360 - alpha) % 360;
             }
             else
             {
@@ -211,7 +210,7 @@ namespace SpawnDev.BlazorJS.NexStar
             }
 
             CurrentOrientation = new Vector3((float)alpha, (float)beta, (float)gamma);
-            
+
             // Smoothing
             _history.Enqueue(CurrentOrientation);
             if (_history.Count > SmoothingWindowSize)
@@ -230,7 +229,7 @@ namespace SpawnDev.BlazorJS.NexStar
             // For a simple implementation initially, we will ignore wrap-around or handle it simply.
             // Given it's a "Push-To" aid, we might not be crossing North constantly, but we should handle it.
             // Proper way: Sum of sines and cosines.
-            
+
             float sumSinAlpha = 0;
             float sumCosAlpha = 0;
             float sumBeta = 0;
@@ -243,7 +242,7 @@ namespace SpawnDev.BlazorJS.NexStar
                 var alphaRad = v.X * MathF.PI / 180f;
                 sumSinAlpha += MathF.Sin(alphaRad);
                 sumCosAlpha += MathF.Cos(alphaRad);
-                
+
                 sumBeta += v.Y;
                 sumGamma += v.Z;
                 count++;
@@ -289,24 +288,24 @@ namespace SpawnDev.BlazorJS.NexStar
             // Z-Rot(0) = Y (North).
             // Z-Rot(-90) = X (East).
             // So AngleZ = -Azimuth.
-            
+
             // Altitude: 0=Horizon, 90=Zenith.
             // Rotation around X (East): Y(North) -> Z(Up) is +90 deg.
             // So AngleX = +Altitude.
-            
+
             var azRad = (float)(-telescopePos.Azimuth * Math.PI / 180.0);
             var altRad = (float)(telescopePos.Altitude * Math.PI / 180.0);
 
             var qAz = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, azRad);
             var qAlt = Quaternion.CreateFromAxisAngle(Vector3.UnitX, altRad);
-            
+
             // Order: Azimuth first (global), then Altitude (local/elevated)
-            var scopeQuat = qAz * qAlt; 
+            var scopeQuat = qAz * qAlt;
 
             // 3. Calculate Offset
             // scope = phone * offset  =>  offset = Inverse(phone) * scope
             _calibrationOffset = Quaternion.Inverse(phoneQuat) * scopeQuat;
-            
+
             IsCalibrated = true;
         }
 
@@ -319,7 +318,7 @@ namespace SpawnDev.BlazorJS.NexStar
             if (!IsCalibrated || !_isListening) return null;
 
             var phoneQuat = GetQuaternionFromEuler(SmoothedOrientation);
-            
+
             // Apply offset
             // scope = phone * offset
             var scopeQuat = phoneQuat * _calibrationOffset;
@@ -344,7 +343,7 @@ namespace SpawnDev.BlazorJS.NexStar
             // (0, -1) -> PI (180)
             // (-1, 0) -> -PI/2 (-90) -> 270.
             // So Atan2(X, Y) works perfectly for Azimuth 0=North, 90=East.
-            
+
             var azRad = MathF.Atan2(pointing.X, pointing.Y);
             var az = azRad * 180f / MathF.PI;
             if (az < 0) az += 360f;
@@ -356,7 +355,7 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             // Euler: Alpha (Z), Beta (X), Gamma (Y)
             // Web Standard Order: Z -> X -> Y
-            
+
             var alphaRad = euler.X * MathF.PI / 180f;
             var betaRad = euler.Y * MathF.PI / 180f;
             var gammaRad = euler.Z * MathF.PI / 180f;

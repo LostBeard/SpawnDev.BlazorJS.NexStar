@@ -241,7 +241,7 @@ namespace SpawnDev.BlazorJS.NexStar
             double minAltitude = 15, double minSeparation = 40, double maxSeparation = 120)
         {
             var visible = GetVisibleAlignmentStars(latitude, longitude, utc, minAltitude).ToList();
-            
+
             for (int i = 0; i < visible.Count; i++)
             {
                 for (int j = i + 1; j < visible.Count; j++)
@@ -249,7 +249,7 @@ namespace SpawnDev.BlazorJS.NexStar
                     var sep = AstronomyMath.AngularSeparation(
                         visible[i].RightAscension, visible[i].Declination,
                         visible[j].RightAscension, visible[j].Declination);
-                    
+
                     if (sep >= minSeparation && sep <= maxSeparation)
                     {
                         yield return (visible[i], visible[j], sep);

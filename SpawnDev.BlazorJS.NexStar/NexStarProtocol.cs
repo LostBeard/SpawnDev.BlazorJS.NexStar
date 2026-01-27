@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace SpawnDev.BlazorJS.NexStar
 {
     /// <summary>
@@ -23,7 +21,7 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (string.IsNullOrEmpty(hex) || hex.Length < 4)
                 return 0;
-            
+
             var value = Convert.ToUInt32(hex.Substring(0, 4), 16);
             return value / 65536.0 * 360.0;
         }
@@ -37,7 +35,7 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (string.IsNullOrEmpty(hex) || hex.Length < 8)
                 return 0;
-            
+
             var value = Convert.ToUInt64(hex.Substring(0, 8), 16);
             return value / (double)0xFFFFFFFF * 360.0;
         }
@@ -52,7 +50,7 @@ namespace SpawnDev.BlazorJS.NexStar
             // Normalize to 0-360 range
             degrees = degrees - 360.0 * Math.Floor(degrees / 360.0);
             if (degrees < 0) degrees += 360.0;
-            
+
             var factor = degrees / 360.0;
             var value = (ushort)(factor * 65536);
             return value.ToString("X4");
@@ -68,7 +66,7 @@ namespace SpawnDev.BlazorJS.NexStar
             // Normalize to 0-360 range
             degrees = degrees - 360.0 * Math.Floor(degrees / 360.0);
             if (degrees < 0) degrees += 360.0;
-            
+
             var factor = degrees / 360.0;
             var value = (uint)(factor * 0xFFFFFFFF);
             return value.ToString("X8");
@@ -83,16 +81,16 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (string.IsNullOrEmpty(response))
                 return (0, 0);
-            
+
             // Remove terminator if present
             response = response.TrimEnd('#');
-            
+
             var parts = response.Split(',');
             if (parts.Length < 2)
                 return (0, 0);
-            
+
             double val1, val2;
-            
+
             if (parts[0].Length >= 8)
             {
                 // Precise format (32-bit)
@@ -105,11 +103,11 @@ namespace SpawnDev.BlazorJS.NexStar
                 val1 = NexToDecimalDegrees(parts[0]);
                 val2 = NexToDecimalDegrees(parts[1]);
             }
-            
+
             // Adjust second value for declination/altitude (-90 to +90)
             if (val2 > 270) val2 -= 360;
             else if (val2 > 90) val2 -= 360;
-            
+
             return (val1, val2);
         }
 
@@ -176,7 +174,7 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <param name="data3">Data byte 3</param>
         /// <param name="resLen">Expected response length</param>
         /// <returns>Command bytes</returns>
-        public static byte[] FormatPassThroughCommand(byte msgLen, byte destId, byte cmdId, 
+        public static byte[] FormatPassThroughCommand(byte msgLen, byte destId, byte cmdId,
             byte data1, byte data2, byte data3, byte resLen)
         {
             return new byte[] { (byte)'P', msgLen, destId, cmdId, data1, data2, data3, resLen };
@@ -207,12 +205,12 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             byte axisId = (byte)axis;
             byte cmdId = (byte)(direction == SlewDirection.Positive ? 6 : 7); // 6=positive, 7=negative
-            
+
             // Rate is multiplied by 4 and split into high/low bytes
             int iRate = (int)(rateArcsecPerSec * 4);
             byte rateH = (byte)(iRate / 256);
             byte rateL = (byte)(iRate % 256);
-            
+
             return FormatPassThroughCommand(3, axisId, cmdId, rateH, rateL, 0, 0);
         }
 
@@ -250,7 +248,7 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             var (latDeg, latMin, latSec, latSign) = DecimalToDMS(lat);
             var (lonDeg, lonMin, lonSec, lonSign) = DecimalToDMS(lon);
-            
+
             return new byte[] { (byte)'W', latDeg, latMin, latSec, latSign, lonDeg, lonMin, lonSec, lonSign };
         }
 
@@ -261,10 +259,10 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (response == null || response.Length < 8)
                 return new GeoLocation();
-            
+
             var lat = DMSToDecimal(response[0], response[1], response[2], response[3]);
             var lon = DMSToDecimal(response[4], response[5], response[6], response[7]);
-            
+
             return new GeoLocation(lat, lon);
         }
 
@@ -278,11 +276,11 @@ namespace SpawnDev.BlazorJS.NexStar
         public static byte[] FormatSetTimeCommand(DateTime time, int tzOffset, bool dst)
         {
             byte tz = (byte)(tzOffset < 0 ? tzOffset + 256 : tzOffset);
-            return new byte[] 
-            { 
-                (byte)'H', 
-                (byte)time.Hour, 
-                (byte)time.Minute, 
+            return new byte[]
+            {
+                (byte)'H',
+                (byte)time.Hour,
+                (byte)time.Minute,
                 (byte)time.Second,
                 (byte)time.Month,
                 (byte)time.Day,
@@ -299,11 +297,11 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (response == null || response.Length < 8)
                 return new TelescopeTime();
-            
+
             int tz = response[6] > 12 ? response[6] - 256 : response[6];
-            
+
             return new TelescopeTime(
-                new DateTime(2000 + response[5], response[3], response[4], 
+                new DateTime(2000 + response[5], response[3], response[4],
                     response[0], response[1], response[2]),
                 tz,
                 response[7] != 0
