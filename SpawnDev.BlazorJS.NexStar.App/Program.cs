@@ -8,6 +8,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddBlazorJSRuntime(out var JS);
 builder.Services.AddSingleton<NexStarService>();
+builder.Services.AddSingleton<PhoneSensorService>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 if (JS.IsWindow)
