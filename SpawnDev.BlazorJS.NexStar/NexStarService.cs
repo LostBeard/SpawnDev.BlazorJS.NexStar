@@ -395,9 +395,6 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (Writer == null || !ComsEnabled) return null;
 
-            // Debug: log command being sent
-            JS.Log($"TX: {BitConverter.ToString(command)} ({Encoding.ASCII.GetString(command.Select(b => b >= 32 && b < 127 ? b : (byte)'.').ToArray())})");
-
             lock (_responseLock)
             {
                 _responseBuffer.Clear();
@@ -412,16 +409,10 @@ namespace SpawnDev.BlazorJS.NexStar
                 using var cts = new CancellationTokenSource(timeoutMs);
                 cts.Token.Register(() => _pendingResponse?.TrySetCanceled());
 
-                var response = await _pendingResponse.Task;
-                
-                // Debug: log response received
-                JS.Log($"RX: {BitConverter.ToString(response)} ({response.Length} bytes)");
-                
-                return response;
+                return await _pendingResponse.Task;
             }
             catch (OperationCanceledException)
             {
-                JS.Log("Command timeout");
                 return null;
             }
             catch (Exception ex)
@@ -662,13 +653,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SlewFixedAsync(SlewAxis axis, SlewDirection direction, SlewRate rate)
         {
-            JS.Log($"SlewFixedAsync: axis={axis} (0x{(byte)axis:X2}), direction={direction}, rate={rate}");
             var command = NexStarProtocol.FormatFixedSlewCommand(axis, direction, rate);
             var response = await SendCommandAsync(command);
-            JS.Log($"SlewFixedAsync result: {(response != null ? "OK" : "FAILED")}");
             return response != null;
         }
-
 
         /// <summary>
         /// Starts slewing at a variable rate

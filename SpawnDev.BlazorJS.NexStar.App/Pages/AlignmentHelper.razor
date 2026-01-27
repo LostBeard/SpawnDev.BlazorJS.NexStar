@@ -1,0 +1,680 @@
+@page "/alignment"
+@inject NexStarService NexStar
+
+<PageTitle>Alignment Helper - NexStar</PageTitle>
+
+<div class="alignment-page">
+    <h1>⭐ Alignment Helper</h1>
+
+    @if (NexStar.Location == null)
+    {
+        <div class="warning-panel">
+            <h3>⚠️ Location Required</h3>
+            <p>Please set your location in <a href="settings">Settings</a> before alignment.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Step indicator -->
+        <div class="steps">
+            <div class="step @(_step == 1 ? "active" : _step > 1 ? "done" : "")">
+                <span class="step-num">1</span>
+                <span class="step-label">Select Star 1</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step @(_step == 2 ? "active" : _step > 2 ? "done" : "")">
+                <span class="step-num">2</span>
+                <span class="step-label">Center Star 1</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step @(_step == 3 ? "active" : _step > 3 ? "done" : "")">
+                <span class="step-num">3</span>
+                <span class="step-label">Select Star 2</span>
+            </div>
+            <div class="step-connector"></div>
+            <div class="step @(_step == 4 ? "active" : "")">
+                <span class="step-num">4</span>
+                <span class="step-label">Center Star 2</span>
+            </div>
+        </div>
+
+        @if (_step == 1)
+        {
+            <div class="panel">
+                <h2>Select First Alignment Star</h2>
+                <p>Choose a bright star currently visible in the sky. Stars are sorted by brightness.</p>
+                
+                <div class="star-grid">
+                    @foreach (var star in GetVisibleStars())
+                    {
+                        var altAz = GetAltAz(star);
+                        <div class="star-card @(_star1 == star ? "selected" : "")" @onclick="@(() => _star1 = star)">
+                            <div class="star-name">@star.Name</div>
+                            <div class="star-info">
+                                <span class="mag">mag @star.Magnitude.ToString("F1")</span>
+                                <span class="constellation">@star.Constellation</span>
+                            </div>
+                            @if (altAz != null)
+                            {
+                                <div class="star-position">
+                                    <span>Alt: @altAz.Altitude.ToString("F0")°</span>
+                                    <span>Az: @altAz.Azimuth.ToString("F0")°</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" @onclick="GoToStep2" disabled="@(_star1 == null)">
+                        Next: Center @(_star1?.Name ?? "Star") →
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_step == 2)
+        {
+            <div class="panel">
+                <h2>Center @_star1?.Name in Eyepiece</h2>
+                
+                <div class="star-detail">
+                    <div class="star-name-large">@_star1?.Name</div>
+                    <div class="star-designation">@(_star1 as Star)?.Designation</div>
+                    <div class="coords">
+                        <div>RA: @_star1?.FormatRA()</div>
+                        <div>Dec: @_star1?.FormatDec()</div>
+                    </div>
+                    @{
+                        var altAz1 = _star1 != null ? GetAltAz(_star1) : null;
+                    }
+                    @if (altAz1 != null)
+                    {
+                        <div class="position">
+                            <div>Altitude: @altAz1.Altitude.ToString("F1")°</div>
+                            <div>Azimuth: @altAz1.Azimuth.ToString("F1")°</div>
+                        </div>
+                    }
+                </div>
+
+                <div class="instructions">
+                    <ol>
+                        <li>Manually slew your telescope toward @_star1?.Name</li>
+                        <li>Use the finderscope to locate the star</li>
+                        <li>Center the star precisely in your eyepiece</li>
+                        <li>Click "Star Centered" when done</li>
+                    </ol>
+                </div>
+
+                <!-- Slew controls -->
+                @if (NexStar.ComsEnabled)
+                {
+                    <div class="slew-controls">
+                        <div class="dpad">
+                            <button class="dpad-btn north" @onclick="@(async () => await SlewDir(SlewAxis.DecAlt, SlewDirection.Positive))">▲</button>
+                            <button class="dpad-btn west" @onclick="@(async () => await SlewDir(SlewAxis.RaAzm, SlewDirection.Negative))">◀</button>
+                            <button class="dpad-btn stop" @onclick="StopSlew">■</button>
+                            <button class="dpad-btn east" @onclick="@(async () => await SlewDir(SlewAxis.RaAzm, SlewDirection.Positive))">▶</button>
+                            <button class="dpad-btn south" @onclick="@(async () => await SlewDir(SlewAxis.DecAlt, SlewDirection.Negative))">▼</button>
+                        </div>
+                        <div class="slew-rate">
+                            <label>Rate: @_slewRate</label>
+                            <input type="range" min="1" max="9" @bind="_slewRate" />
+                        </div>
+                    </div>
+                }
+
+                <div class="actions">
+                    <button class="btn" @onclick="@(() => _step = 1)">← Back</button>
+                    <button class="btn btn-success" @onclick="SyncStar1" disabled="@(!NexStar.ComsEnabled)">
+                        ⚓ Star Centered - Sync
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_step == 3)
+        {
+            <div class="panel">
+                <h2>Select Second Alignment Star</h2>
+                <p>Choose a star with good angular separation from @_star1?.Name. Recommended pairs are highlighted.</p>
+                
+                <div class="star-grid">
+                    @foreach (var star in GetSecondStarCandidates())
+                    {
+                        var altAz = GetAltAz(star);
+                        var sep = _star1 != null ? AstronomyMath.AngularSeparation(
+                            _star1.RightAscension, _star1.Declination,
+                            star.RightAscension, star.Declination) : 0;
+                        var isGood = sep >= 40 && sep <= 120;
+                        
+                        <div class="star-card @(_star2 == star ? "selected" : "") @(isGood ? "recommended" : "")" 
+                             @onclick="@(() => _star2 = star)">
+                            <div class="star-name">@star.Name</div>
+                            <div class="star-info">
+                                <span class="mag">mag @star.Magnitude.ToString("F1")</span>
+                                <span class="separation">@sep.ToString("F0")° from Star 1</span>
+                            </div>
+                            @if (altAz != null)
+                            {
+                                <div class="star-position">
+                                    <span>Alt: @altAz.Altitude.ToString("F0")°</span>
+                                    <span>Az: @altAz.Azimuth.ToString("F0")°</span>
+                                </div>
+                            }
+                            @if (isGood)
+                            {
+                                <div class="recommended-badge">✓ Good Separation</div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="actions">
+                    <button class="btn" @onclick="@(() => _step = 2)">← Back</button>
+                    <button class="btn btn-primary" @onclick="GoToStep4" disabled="@(_star2 == null)">
+                        Next: Center @(_star2?.Name ?? "Star") →
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_step == 4)
+        {
+            <div class="panel">
+                <h2>Center @_star2?.Name in Eyepiece</h2>
+                
+                <div class="star-detail">
+                    <div class="star-name-large">@_star2?.Name</div>
+                    <div class="star-designation">@(_star2 as Star)?.Designation</div>
+                    <div class="coords">
+                        <div>RA: @_star2?.FormatRA()</div>
+                        <div>Dec: @_star2?.FormatDec()</div>
+                    </div>
+                </div>
+
+                <div class="instructions">
+                    <ol>
+                        <li>Slew your telescope toward @_star2?.Name</li>
+                        <li>Center the star precisely in your eyepiece</li>
+                        <li>Click "Star Centered" to complete alignment</li>
+                    </ol>
+                </div>
+
+                @if (NexStar.ComsEnabled)
+                {
+                    <div class="slew-controls">
+                        <div class="dpad">
+                            <button class="dpad-btn north" @onclick="@(async () => await SlewDir(SlewAxis.DecAlt, SlewDirection.Positive))">▲</button>
+                            <button class="dpad-btn west" @onclick="@(async () => await SlewDir(SlewAxis.RaAzm, SlewDirection.Negative))">◀</button>
+                            <button class="dpad-btn stop" @onclick="StopSlew">■</button>
+                            <button class="dpad-btn east" @onclick="@(async () => await SlewDir(SlewAxis.RaAzm, SlewDirection.Positive))">▶</button>
+                            <button class="dpad-btn south" @onclick="@(async () => await SlewDir(SlewAxis.DecAlt, SlewDirection.Negative))">▼</button>
+                        </div>
+                        <div class="slew-rate">
+                            <label>Rate: @_slewRate</label>
+                            <input type="range" min="1" max="9" @bind="_slewRate" />
+                        </div>
+                    </div>
+                }
+
+                <div class="actions">
+                    <button class="btn" @onclick="@(() => _step = 3)">← Back</button>
+                    <button class="btn btn-success" @onclick="SyncStar2" disabled="@(!NexStar.ComsEnabled)">
+                        ⚓ Star Centered - Complete Alignment
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_step == 5)
+        {
+            <div class="panel success-panel">
+                <h2>✅ Alignment Complete!</h2>
+                <p>Your telescope has been aligned using:</p>
+                <div class="alignment-summary">
+                    <div><strong>Star 1:</strong> @_star1?.Name (@_star1?.Constellation)</div>
+                    <div><strong>Star 2:</strong> @_star2?.Name (@_star2?.Constellation)</div>
+                </div>
+                <p>GoTo accuracy should now be improved. You can use the Object Browser to slew to targets.</p>
+                <div class="actions">
+                    <a href="objects" class="btn btn-primary">🌌 Browse Objects</a>
+                    <button class="btn" @onclick="ResetAlignment">Start New Alignment</button>
+                </div>
+            </div>
+        }
+    }
+
+    @if (!string.IsNullOrEmpty(_statusMessage))
+    {
+        <div class="status-bar @_statusClass">@_statusMessage</div>
+    }
+</div>
+
+@code {
+    private int _step = 1;
+    private CelestialObject? _star1;
+    private CelestialObject? _star2;
+    private int _slewRate = 5;
+    private string _statusMessage = "";
+    private string _statusClass = "";
+
+    private IEnumerable<Star> GetVisibleStars()
+    {
+        if (NexStar.Location == null) return Enumerable.Empty<Star>();
+        
+        return CelestialCatalogs.GetVisibleAlignmentStars(
+            NexStar.Location.Latitude,
+            NexStar.Location.Longitude,
+            DateTime.UtcNow,
+            15) // Minimum 15° altitude
+            .OrderBy(s => s.Magnitude);
+    }
+
+    private IEnumerable<Star> GetSecondStarCandidates()
+    {
+        if (_star1 == null) return GetVisibleStars();
+        
+        return GetVisibleStars()
+            .Where(s => s != _star1)
+            .OrderByDescending(s => 
+            {
+                var sep = AstronomyMath.AngularSeparation(
+                    _star1.RightAscension, _star1.Declination,
+                    s.RightAscension, s.Declination);
+                // Prefer separations between 40-120 degrees
+                return sep >= 40 && sep <= 120 ? 1000 - s.Magnitude : -s.Magnitude;
+            });
+    }
+
+    private AzAltCoordinates? GetAltAz(CelestialObject obj)
+    {
+        if (NexStar.Location == null) return null;
+        return AstronomyMath.EquatorialToHorizontal(
+            obj.RightAscension, obj.Declination,
+            NexStar.Location.Latitude, NexStar.Location.Longitude,
+            DateTime.UtcNow);
+    }
+
+    private void GoToStep2() => _step = 2;
+    private void GoToStep4() => _step = 4;
+
+    private async Task SlewDir(SlewAxis axis, SlewDirection dir)
+    {
+        await NexStar.SlewFixedAsync(axis, dir, (SlewRate)_slewRate);
+    }
+
+    private async Task StopSlew()
+    {
+        await NexStar.StopAllSlewAsync();
+    }
+
+    private async Task SyncStar1()
+    {
+        if (_star1 == null) return;
+        
+        _statusMessage = $"Syncing to {_star1.Name}...";
+        _statusClass = "info";
+        StateHasChanged();
+
+        var result = await NexStar.SyncRaDecAsync(_star1.RightAscension, _star1.Declination);
+        
+        if (result)
+        {
+            _statusMessage = $"Synced to {_star1.Name}!";
+            _statusClass = "success";
+            _step = 3;
+        }
+        else
+        {
+            _statusMessage = "Sync failed.";
+            _statusClass = "error";
+        }
+        StateHasChanged();
+    }
+
+    private async Task SyncStar2()
+    {
+        if (_star2 == null) return;
+        
+        _statusMessage = $"Syncing to {_star2.Name}...";
+        _statusClass = "info";
+        StateHasChanged();
+
+        var result = await NexStar.SyncRaDecAsync(_star2.RightAscension, _star2.Declination);
+        
+        if (result)
+        {
+            _statusMessage = "Alignment complete!";
+            _statusClass = "success";
+            _step = 5;
+        }
+        else
+        {
+            _statusMessage = "Sync failed.";
+            _statusClass = "error";
+        }
+        StateHasChanged();
+    }
+
+    private void ResetAlignment()
+    {
+        _step = 1;
+        _star1 = null;
+        _star2 = null;
+        _statusMessage = "";
+    }
+}
+
+<style>
+    .alignment-page {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1rem;
+        color: #e2e8f0;
+    }
+
+    .alignment-page h1 {
+        color: white;
+        margin-bottom: 1.5rem;
+    }
+
+    .warning-panel {
+        background: #78350f;
+        border: 1px solid #fbbf24;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .warning-panel a {
+        color: #fbbf24;
+    }
+
+    .steps {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #334155;
+        border-radius: 20px;
+        color: #64748b;
+    }
+
+    .step.active {
+        background: #1e40af;
+        color: white;
+    }
+
+    .step.done {
+        background: #166534;
+        color: white;
+    }
+
+    .step-num {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: currentColor;
+        color: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8rem;
+    }
+
+    .step.active .step-num,
+    .step.done .step-num {
+        background: white;
+        color: #1e40af;
+    }
+
+    .step-connector {
+        width: 30px;
+        height: 2px;
+        background: #475569;
+    }
+
+    .panel {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    .panel h2 {
+        color: white;
+        margin-bottom: 1rem;
+    }
+
+    .star-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0.75rem;
+        margin: 1rem 0;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .star-card {
+        background: #0f172a;
+        border: 2px solid #334155;
+        border-radius: 8px;
+        padding: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .star-card:hover {
+        border-color: #60a5fa;
+    }
+
+    .star-card.selected {
+        border-color: #3b82f6;
+        background: #1e3a5f;
+    }
+
+    .star-card.recommended {
+        border-color: #22c55e;
+    }
+
+    .star-name {
+        font-weight: bold;
+        color: #fbbf24;
+        margin-bottom: 0.25rem;
+    }
+
+    .star-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #94a3b8;
+    }
+
+    .star-position {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    .recommended-badge {
+        background: #166534;
+        color: white;
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+        text-align: center;
+    }
+
+    .star-detail {
+        text-align: center;
+        padding: 1.5rem;
+        background: #0f172a;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .star-name-large {
+        font-size: 2rem;
+        color: #fbbf24;
+        font-weight: bold;
+    }
+
+    .star-designation {
+        color: #94a3b8;
+        margin-bottom: 1rem;
+    }
+
+    .coords, .position {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        color: #64748b;
+        font-family: monospace;
+    }
+
+    .instructions {
+        background: #334155;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+
+    .instructions ol {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+
+    .instructions li {
+        margin-bottom: 0.5rem;
+    }
+
+    .slew-controls {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        align-items: center;
+        margin: 1.5rem 0;
+    }
+
+    .dpad {
+        display: grid;
+        grid-template-areas: 
+            ". north ."
+            "west stop east"
+            ". south .";
+        grid-template-columns: repeat(3, 50px);
+        grid-template-rows: repeat(3, 50px);
+        gap: 4px;
+    }
+
+    .dpad-btn {
+        background: #475569;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: all 0.1s;
+    }
+
+    .dpad-btn:hover { background: #64748b; }
+    .dpad-btn:active { background: #3b82f6; }
+
+    .dpad-btn.north { grid-area: north; }
+    .dpad-btn.south { grid-area: south; }
+    .dpad-btn.east { grid-area: east; }
+    .dpad-btn.west { grid-area: west; }
+    .dpad-btn.stop { grid-area: stop; background: #dc2626; }
+
+    .slew-rate {
+        text-align: center;
+    }
+
+    .slew-rate label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #94a3b8;
+    }
+
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn:not(.btn-primary):not(.btn-success) {
+        background: #475569;
+        color: white;
+    }
+
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-success {
+        background: #22c55e;
+        color: white;
+    }
+
+    .success-panel {
+        text-align: center;
+    }
+
+    .alignment-summary {
+        background: #0f172a;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+
+    .status-bar {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+    }
+
+    .status-bar.info { background: #1e40af; }
+    .status-bar.success { background: #166534; }
+    .status-bar.error { background: #991b1b; }
+
+    @@media (max-width: 600px) {
+        .steps {
+            flex-direction: column;
+        }
+        .step-connector {
+            width: 2px;
+            height: 20px;
+        }
+    }
+</style>

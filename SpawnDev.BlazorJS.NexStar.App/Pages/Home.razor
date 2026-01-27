@@ -131,7 +131,26 @@
                 </div>
             </section>
 
+            <!-- Quick Access -->
+            <section class="panel quick-access-panel">
+                <h2>🎯 Quick Access</h2>
+                <div class="quick-targets">
+                    @foreach (var target in GetQuickTargets())
+                    {
+                        <button class="quick-btn" @onclick="@(() => QuickGoto(target))" 
+                                disabled="@(!NexStar.ComsEnabled)">
+                            @target.DisplayName
+                        </button>
+                    }
+                </div>
+                <div class="quick-links">
+                    <a href="objects" class="link-btn">🌌 Object Browser</a>
+                    <a href="alignment" class="link-btn">⭐ Alignment Helper</a>
+                </div>
+            </section>
+
             <!-- Manual Slew Controls -->
+
             <section class="panel slew-panel">
                 <h2>Manual Slew</h2>
                 <div class="slew-controls">
@@ -392,6 +411,40 @@
         StateHasChanged();
     }
 
+    private IEnumerable<CelestialObject> GetQuickTargets()
+    {
+        // Return some popular objects
+        return new List<CelestialObject>
+        {
+            CelestialCatalogs.AlignmentStars.First(s => s.Name == "Polaris"),
+            CelestialCatalogs.Messier.First(m => m.MessierNumber == 31), // Andromeda
+            CelestialCatalogs.Messier.First(m => m.MessierNumber == 42), // Orion Nebula
+            CelestialCatalogs.Messier.First(m => m.MessierNumber == 45), // Pleiades
+            CelestialCatalogs.Messier.First(m => m.MessierNumber == 13), // Hercules Cluster
+            CelestialCatalogs.Messier.First(m => m.MessierNumber == 57), // Ring Nebula
+        };
+    }
+
+    private async Task QuickGoto(CelestialObject target)
+    {
+        _statusMessage = $"Slewing to {target.DisplayName}...";
+        _statusClass = "info";
+        StateHasChanged();
+
+        var result = await NexStar.GotoRaDecAsync(target.RightAscension, target.Declination);
+        
+        if (result)
+        {
+            _statusMessage = $"GoTo {target.DisplayName} initiated.";
+            _statusClass = "success";
+        }
+        else
+        {
+            _statusMessage = "GoTo failed.";
+            _statusClass = "error";
+        }
+        StateHasChanged();
+    }
 
     private async Task ExecuteGoto()
     {
@@ -700,6 +753,51 @@
     .dpad-btn.west { grid-area: west; }
     .dpad-btn.stop { grid-area: stop; background: #dc2626; }
     .dpad-btn.stop:hover { background: #ef4444; }
+
+    /* Quick Access Panel */
+    .quick-targets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .quick-btn {
+        padding: 0.5rem 1rem;
+        background: #334155;
+        border: none;
+        border-radius: 6px;
+        color: #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .quick-btn:hover:not(:disabled) {
+        background: #3b82f6;
+    }
+
+    .quick-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .quick-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .link-btn {
+        padding: 0.5rem 1rem;
+        background: #1e40af;
+        border-radius: 6px;
+        color: white;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .link-btn:hover {
+        background: #2563eb;
+    }
 
     .slew-rate-control {
         flex: 1;
