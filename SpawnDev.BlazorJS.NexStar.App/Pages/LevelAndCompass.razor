@@ -32,7 +32,7 @@
                 <h2>Compass & Level</h2>
                 <div class="combined-display">
                     <!-- Compass Ring (rotates) -->
-                    <div class="compass-ring" style="transform: rotate(@(_heading)deg)">
+                    <div class="compass-ring" style="transform: rotate(@(-CompassBearing)deg)">
                         <div class="compass-n">N</div>
                         <div class="compass-e">E</div>
                         <div class="compass-s">S</div>
@@ -52,7 +52,7 @@
                 <div class="readouts">
                     <div class="readout">
                         <label>Heading</label>
-                        <span class="@(IsAlignedToNorth() ? "status-good" : "")">@Math.Round(_heading, 1)°</span>
+                        <span class="@(IsAlignedToNorth() ? "status-good" : "")">@Math.Round(CompassBearing, 1)°</span>
                     </div>
                     <div class="readout">
                         <label>Pitch</label>
@@ -174,14 +174,17 @@
         StateHasChanged();
     }
 
+    // Convert raw sensor alpha (counter-clockwise) to compass bearing (clockwise)
+    private double CompassBearing => _heading == 0 ? 0 : (360 - _heading) % 360;
+
     private bool IsAlignedToNorth() => Math.Abs(GetNorthOffset()) < 5;
 
     private double GetNorthOffset()
     {
-        // Normalize heading difference to -180 to +180
-        var diff = _heading;
-        if (diff > 180) diff -= 360;
-        return diff;
+        // Use compass bearing for offset calculation
+        var bearing = CompassBearing;
+        if (bearing > 180) bearing -= 360;
+        return bearing;
     }
 
     private bool IsLevel() => Math.Abs(_pitch) < 2 && Math.Abs(_roll) < 2;
