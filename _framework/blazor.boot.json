@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.BlazorJS.NexStar.App",
   "resources": {
-    "hash": "sha256-y0obPD0UUFK5TsdZZKyeirP9CS0A5J2WfvNu7XwU2Z8=",
+    "hash": "sha256-ghZrskCs98CUikRa8ZnCl6kU5KOKMwMq5nodTl4eoEE=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-ZWhb+SSdHAX4/G33dbUw7PEClIBLZaq3ksgj3zdO0VU="
     },
@@ -9,7 +9,7 @@
       "dotnet.runtime.js": "sha256-TGUqQm2/C+r+yZ5BCjd72qyLw9wv0KPFKzKXk/giiyY="
     },
     "wasmNative": {
-      "dotnet.native.wasm": "sha256-BhfceCmSAoDhvIxaVggL1LByftNfgKMJhPMQ50ZiX3Y="
+      "dotnet.native.wasm": "sha256-vDX58cne4MuxwGbcv/TttHVyxYDE/xVQ1NW/9Un1big="
     },
     "icu": {
       "icudt_CJK.dat": "sha256-SZLtQnRc0JkwqHab0VUVP7T3uBPSeYzxzDnpxPpUnHk=",
@@ -44,7 +44,7 @@
       "System.Console.wasm": "sha256-hq6/96w2jaIcJsmmOtVDjwpOhlb+mgH6gnunGkFdf1w=",
       "System.Diagnostics.DiagnosticSource.wasm": "sha256-hJMwbFhl+52RPmKffEd/FIrLznM5DFOrorOKb6BBit0=",
       "System.Linq.Expressions.wasm": "sha256-YMVB4XfVvtNCXpNKiZ+1bACsJprUqCX4a3UbKYUXlTI=",
-      "System.Linq.wasm": "sha256-esw8K65Y6Hx48Zc4chVl1y8y0P/kWQF9xLIRzkg9L44=",
+      "System.Linq.wasm": "sha256-dARn0x0lHT8aes3tB6+nwp90L7H9obpog9QkpVOCksY=",
       "System.Memory.wasm": "sha256-SZlP8MCEsaABWxpN2QiEzv8GXU7mdwRRr7wXMSyAwHw=",
       "System.Net.Http.wasm": "sha256-z3DD7S8gvDwrI9OQyPF35YAVIpo1IEHB/UCZl5JPC0Y=",
       "System.Net.Primitives.wasm": "sha256-GTx9Vabfjq3U6DO7N46Q6lwlE3ZEocfrOGxDRqu1U3A=",
@@ -61,9 +61,9 @@
       "System.Text.RegularExpressions.wasm": "sha256-eJ85MEhKnp+Ysj3qfb5LS8qAWcxeVcpw812Kk9itNKk=",
       "System.Threading.wasm": "sha256-fTT1JVFakUJIVVI1lWTVp9WavtykFH+A/PDNPgHwNZk=",
       "System.wasm": "sha256-jXhnUNHzjjL7Plo7WcHuX7V5Dc/Umt+qmGGC+Js76SE=",
-      "System.Private.CoreLib.wasm": "sha256-TlxxjDGLPdo67E2g/37ximb4hstPNiZ0GUTRWdfzHe0=",
-      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-WSJ76Tz+RF4nvYAQqzYgmTFyh3nygDWYlO5gRIhE6uc=",
-      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-tTPgjAwUENdm7FWx0HmE1zAAaNtMY/B4sxGongaANgQ="
+      "System.Private.CoreLib.wasm": "sha256-JsDDfzvfqcxTnzO1JQuJBlBbcJczWMr+9NuJIc+j8+4=",
+      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-uhLJx9oSMhiKDut6cET0UHdbIT1MxFf8sGa2Hl4uRh0=",
+      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-u0Obd844mdg14h7VjhlFV9AiHBoOmhX9mYEu55xyhAQ="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-9suC9LCVB+Qavj4prBgl/ufjjFZIUypz8Imx/0r5LsI="
