@@ -235,5 +235,19 @@ namespace SpawnDev.BlazorJS.NexStar
             double s = ((hours - h) * 60 - m) * 60;
             return $"{h:00}h {m:00}m {s:00.0}s";
         }
+
+        /// <summary>
+        /// Calculate distance in Kilometers between two points on Earth using the Haversine formula approximation.
+        /// </summary>
+        public static double CalculateDistanceKm(double lat1, double lon1, double lat2, double lon2)
+        {
+            // Use AngularSeparation for central arc angle
+            // Note: AngularSeparation expects (ra, dec). We map (lon, lat) to (ra, dec).
+            double degrees = AngularSeparation(lon1, lat1, lon2, lat2);
+            // Earth radius approx 6371km. Circumference = 2 * PI * R.
+            // Distance = (degrees / 360) * 40075 km approx.
+            // Or degrees * (PI / 180) * 6371;
+            return degrees * DEG_TO_RAD * 6371.0;
+        }
     }
 }
