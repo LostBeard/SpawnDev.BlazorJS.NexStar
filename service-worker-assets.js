@@ -1,5 +1,5 @@
 self.assetsManifest = {
-  "version": "03SGFbaI",
+  "version": "G4n8cpHY",
   "assets": [
     {
       "hash": "sha256-My7tTg+oeAg3xF8pC7ZEd8wHEbbfkvKaiGyiRTx1OGA=",
@@ -82,11 +82,11 @@ self.assetsManifest = {
       "url": "_framework/SpawnDev.BackgroundServices.wasm"
     },
     {
-      "hash": "sha256-WRKHFbUMFUUVm6/HT4DMS5XCJcS+uBeajXZGmr4ytCY=",
+      "hash": "sha256-0ZQhh6FizS0fJRagFi0emdf4p2P3bprDZenP01ya8WA=",
       "url": "_framework/SpawnDev.BlazorJS.NexStar.App.wasm"
     },
     {
-      "hash": "sha256-t3Vao+S4rOmYyQJLJIQjMyDhxJfL94znpNt4RNrkJL0=",
+      "hash": "sha256-DpxvjvOBD+qUYVvaLB7CZikoFzBRgSb5whpICLRfymk=",
       "url": "_framework/SpawnDev.BlazorJS.NexStar.wasm"
     },
     {
@@ -202,7 +202,7 @@ self.assetsManifest = {
       "url": "_framework/System.wasm"
     },
     {
-      "hash": "sha256-J9CH0zE0X1R2myysbKwh+9/hpJbo9NpFoOz06aWPscE=",
+      "hash": "sha256-N7/n2bZZLhAN4cYuZX0OKFKxdLvUefp3CkQFb9+L1bU=",
       "url": "_framework/blazor.boot.json"
     },
     {
