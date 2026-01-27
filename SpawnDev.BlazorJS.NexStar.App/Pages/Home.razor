@@ -410,16 +410,7 @@
 
     private IEnumerable<CelestialObject> GetQuickTargets()
     {
-        // Return some popular objects
-        return new List<CelestialObject>
-        {
-            CelestialCatalogs.AlignmentStars.First(s => s.Name == "Polaris"),
-            CelestialCatalogs.Messier.First(m => m.MessierNumber == 31), // Andromeda
-            CelestialCatalogs.Messier.First(m => m.MessierNumber == 42), // Orion Nebula
-            CelestialCatalogs.Messier.First(m => m.MessierNumber == 45), // Pleiades
-            CelestialCatalogs.Messier.First(m => m.MessierNumber == 13), // Hercules Cluster
-            CelestialCatalogs.Messier.First(m => m.MessierNumber == 57), // Ring Nebula
-        };
+        return NexStar.GetVisibleQuickTargets();
     }
 
     private async Task QuickGoto(CelestialObject target)

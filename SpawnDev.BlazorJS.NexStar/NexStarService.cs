@@ -792,6 +792,61 @@ namespace SpawnDev.BlazorJS.NexStar
 
         #endregion
 
+        #region Helper Methods
+
+        /// <summary>
+        /// Get a list of popular targets filtered by visibility from current location
+        /// </summary>
+        /// <param name="currentTime">Time to check visibility (defaults to UTC Now)</param>
+        /// <returns>List of visible popular objects</returns>
+        public IEnumerable<CelestialObject> GetVisibleQuickTargets(DateTime? currentTime = null)
+        {
+            var candidates = new List<CelestialObject>();
+            
+            // Popular Bright Stars
+            var starNames = new[] { "Polaris", "Sirius", "Vega", "Rigel", "Betelgeuse", "Arcturus", "Capella", "Altair", "Aldebaran", "Antares", "Spica" };
+            foreach (var name in starNames)
+            {
+                var s = CelestialCatalogs.AlignmentStars.FirstOrDefault(x => x.Name == name);
+                if (s != null) candidates.Add(s);
+            }
+
+            // Popular Messier Objects (Nebulae, Clusters, Galaxies)
+            // M31 (Andromeda), M42 (Orion), M45 (Pleiades), M13 (Hercules), M57 (Ring), 
+            // M8 (Lagoon), M27 (Dumbbell), M51 (Whirlpool), M44 (Beehive), M11 (Wild Duck)
+            var messierNums = new[] { 31, 42, 45, 13, 57, 8, 27, 51, 44, 11, 16, 20, 81, 82 };
+            foreach (var num in messierNums)
+            {
+                var m = CelestialCatalogs.Messier.FirstOrDefault(x => x.MessierNumber == num);
+                if (m != null) candidates.Add(m);
+            }
+
+            if (Location == null)
+            {
+                // Return all candidates if location unknown
+                return candidates;
+            }
+
+            var time = currentTime ?? DateTime.UtcNow;
+            
+            // Filter by visibility (> 0 degrees altitude) and return sorted by altitude
+            return candidates
+                .Select(obj => new { 
+                    Obj = obj, 
+                    AltAz = AstronomyMath.EquatorialToHorizontal(
+                        obj.RightAscension, obj.Declination, 
+                        Location.Latitude, Location.Longitude, time) 
+                })
+                .Where(x => x.AltAz.Altitude > 10) // Only objects > 10° above horizon
+                .OrderByDescending(x => x.AltAz.Altitude) // Highest objects first
+                .Select(x => x.Obj)
+                .ToList();
+        }
+
+        #endregion
+
+
+
         #region Event Handlers
 
         private async Task InitAsync()
