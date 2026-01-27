@@ -268,6 +268,7 @@
         NexStar.OnStatusChanged += HandleStatusChanged;
         _positionTimer = new System.Timers.Timer(1000);
         _positionTimer.Elapsed += async (s, e) => await AutoUpdatePosition();
+        _positionTimer.Start();
     }
 
     private async Task SelectPort()
