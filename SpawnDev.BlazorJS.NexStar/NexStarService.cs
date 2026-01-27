@@ -188,13 +188,7 @@ namespace SpawnDev.BlazorJS.NexStar
             SerialPort? serialPort = null;
             try
             {
-                serialPort = await Serial.RequestPort(new()
-                {
-                    Filters = new[]
-                    {
-                        new SerialPortFilter { UsbVendorId = ProlificVendorId }
-                    }
-                });
+                serialPort = await Serial.RequestPort();
             }
             catch
             {
