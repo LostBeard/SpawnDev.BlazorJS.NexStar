@@ -1,7 +1,9 @@
 @page "/level"
 @inject PhoneSensorService SensorService
 @inject NexStarService NexStar
+@inject BlazorJSRuntime JS
 @implements IDisposable
+@using SpawnDev.BlazorJS.JSObjects
 
 <PageTitle>Level & Compass</PageTitle>
 
@@ -89,6 +91,27 @@
                 </div>
             </section>
 
+            <!-- Location Info -->
+            <section class="panel location-panel">
+                <div class="panel-header">
+                    <h2>📍 Location</h2>
+                    <button class="btn btn-sm btn-secondary" @onclick="GetLocation" disabled="@_isLocating">
+                        @(_isLocating ? "Locating..." : "↻ Refresh")
+                    </button>
+                </div>
+                <div class="location-grid">
+                    <div class="readout">
+                        <label>Latitude</label>
+                        <span class="value">@(_browserLat?.ToString("F4") ?? "--")°</span>
+                    </div>
+                    <div class="readout">
+                        <label>Longitude</label>
+                        <span class="value">@(_browserLon?.ToString("F4") ?? "--")°</span>
+                    </div>
+                </div>
+                <p class="hint">Use these coordinates if your telescope asks for location during setup.</p>
+            </section>
+
             <!-- Instructions -->
             <section class="panel instructions-panel">
                 <h2>Instructions</h2>
@@ -109,15 +132,45 @@
     private double _pitch = 0;
     private double _roll = 0;
     private bool _isLoading = false;
+    private bool _isLocating = false;
     private string _statusMessage = "";
     private string _statusClass = "";
     private System.Timers.Timer? _updateTimer;
+    private double? _browserLat;
+    private double? _browserLon;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _updateTimer = new System.Timers.Timer(100); // 10 Hz update
         _updateTimer.Elapsed += (s, e) => UpdateSensorValues();
         _updateTimer.Start();
+        await GetLocation();
+    }
+
+    private async Task GetLocation()
+    {
+        if (_isLocating) return;
+        _isLocating = true;
+        StateHasChanged();
+
+        try
+        {
+            using var navigator = JS.Get<SpawnDev.BlazorJS.JSObjects.Navigator>("navigator");
+            using var geolocation = navigator.Geolocation;
+            if (geolocation != null)
+            {
+                var pos = await geolocation.GetCurrentPositionAsync();
+                _browserLat = pos.Coords.Latitude;
+                _browserLon = pos.Coords.Longitude;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Location error: {ex.Message}");
+        }
+
+        _isLocating = false;
+        StateHasChanged();
     }
 
     private void UpdateSensorValues()
@@ -505,5 +558,56 @@
     .btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #27272a;
+        color: #a1a1aa;
+        border: 1px solid #3f3f46;
+        width: auto;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #3f3f46;
+        color: #d4d4d8;
+    }
+
+    /* Location Panel */
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .panel-header h2 {
+        margin: 0;
+    }
+
+    .location-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        background: #0a0a0c;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid #27272a;
+        margin-bottom: 0.75rem;
+    }
+
+    .location-grid .readout {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .location-grid .value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.2rem;
+        color: #fbbf24;
+        font-weight: 600;
+        margin-top: 0.25rem;
     }
 </style>

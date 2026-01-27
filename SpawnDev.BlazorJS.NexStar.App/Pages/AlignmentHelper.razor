@@ -226,16 +226,21 @@
         else if (_step == 5)
         {
             <div class="panel success-panel">
-                <h2>✅ Alignment Complete!</h2>
-                <p>Your telescope has been aligned using:</p>
+                <h2>✅ Sync Complete!</h2>
+                <p>Your telescope's pointing has been synced using:</p>
                 <div class="alignment-summary">
                     <div><strong>Star 1:</strong> @_star1?.Name (@_star1?.Constellation)</div>
                     <div><strong>Star 2:</strong> @_star2?.Name (@_star2?.Constellation)</div>
                 </div>
-                <p>GoTo accuracy should now be improved. You can use the Object Browser to slew to targets.</p>
+                <p>GoTo accuracy should now be improved for this session.</p>
+                <div class="info-note">
+                    <strong>Note:</strong> The "Aligned" status on the Home page reflects the hand controller's internal alignment state. 
+                    For full alignment, use the hand controller's alignment menu. This helper syncs pointing corrections 
+                    which improve accuracy even without full alignment.
+                </div>
                 <div class="actions">
                     <a href="objects" class="btn btn-primary">🌌 Browse Objects</a>
-                    <button class="btn" @onclick="ResetAlignment">Start New Alignment</button>
+                    <button class="btn" @onclick="ResetAlignment">Start New Sync</button>
                 </div>
             </div>
         }
@@ -731,6 +736,21 @@
 
     .alignment-summary strong {
         color: #d4d4d8;
+    }
+
+    .info-note {
+        background: #1a1a22;
+        border: 1px solid #3b82f6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 1rem 0;
+        color: #a1a1aa;
+        font-size: 0.9rem;
+        text-align: left;
+    }
+
+    .info-note strong {
+        color: #60a5fa;
     }
 
     .status-bar {
