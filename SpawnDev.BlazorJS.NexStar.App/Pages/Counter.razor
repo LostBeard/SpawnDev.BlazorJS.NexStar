@@ -1,0 +1,21 @@
+﻿@page "/counter"
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+
+@code {
+    private int currentCount = 0;
+
+    [Inject]
+    SerialService SerialService { get; set; } = default!;
+
+    private async Task IncrementCount()
+    {
+        await SerialService.SelectPort();
+    }
+}

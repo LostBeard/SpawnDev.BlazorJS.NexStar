@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Version>0.0.1-preview.0</Version>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<EmbedAllSources>true</EmbedAllSources>
+		<DebugType>Embedded</DebugType>
+		<Title>SpawnDev.BlazorJS.NexStar</Title>
+		<Authors>LostBeard</Authors>
+		<Description>Provides tools to communicate with and control Celestron NexStar telescopes using the Web Serial API in Blazor WebAssembly.</Description>
+		<PackageProjectUrl>https://github.com/LostBeard/SpawnDev.BlazorJS.NexStar</PackageProjectUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageIcon>icon-128.png</PackageIcon>
+		<RepositoryUrl>https://github.com/LostBeard/SpawnDev.BlazorJS.NexStar.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageTags>Blazor;BlazorWebAssembly;Celestron;NexStar;TelescopeControl;Astronomy;WebSerial</PackageTags>
+		<NoPackageAnalysis>true</NoPackageAnalysis>
+		<EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+		<IsPackable>true</IsPackable>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="Assets\icon-128.png" Pack="true" PackagePath="\" />
+		<None Include="..\LICENSE.txt" Pack="true" PackagePath="\" />
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="SpawnDev.BlazorJS" Version="2.61.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<SupportedPlatform Include="browser" />
+	</ItemGroup>
+
+</Project>
