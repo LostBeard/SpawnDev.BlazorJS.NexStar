@@ -1,6 +1,6 @@
 {
-  "name": "SpwnDev NexStar",
-  "short_name": "SpwnDev NexStar",
+  "name": "SpawnDev NexStar",
+  "short_name": "SpawnDev NexStar",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
