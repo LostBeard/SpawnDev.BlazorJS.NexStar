@@ -1,5 +1,5 @@
 self.assetsManifest = {
-  "version": "Jq5vhB06",
+  "version": "jE4s3Rv2",
   "assets": [
     {
       "hash": "sha256-My7tTg+oeAg3xF8pC7ZEd8wHEbbfkvKaiGyiRTx1OGA=",
@@ -78,11 +78,11 @@ self.assetsManifest = {
       "url": "_framework/SpawnDev.BackgroundServices.wasm"
     },
     {
-      "hash": "sha256-xOq2UB0hJDr0t/87AFBXQ2n5rZ8nbxc5VV5nip46w84=",
+      "hash": "sha256-uvC4PBbom/tGcJBuqn7XSAmPSkbvnA1R500gfPYZC+0=",
       "url": "_framework/SpawnDev.BlazorJS.NexStar.App.wasm"
     },
     {
-      "hash": "sha256-e44exiggM+SPt3nOQIcfdPjbUUrrbJ9/xwWz/m9I5dM=",
+      "hash": "sha256-4Hr/VaqPZ3CZGcpTsVrzhfsB0KwarH8zXxFr3+S2+pY=",
       "url": "_framework/SpawnDev.BlazorJS.NexStar.wasm"
     },
     {
@@ -198,7 +198,7 @@ self.assetsManifest = {
       "url": "_framework/System.wasm"
     },
     {
-      "hash": "sha256-25xxP1DCOMkVL7VXSPW1LhUoFqFyDh1T2bHiJ8VOFpM=",
+      "hash": "sha256-S218jjlCM3cA3x2leq/zguJPZnhyohlwU/prKkpydoM=",
       "url": "_framework/blazor.boot.json"
     },
     {
@@ -246,15 +246,15 @@ self.assetsManifest = {
       "url": "css/bootstrap/bootstrap.min.css.map"
     },
     {
-      "hash": "sha256-4mWsDy3aHl36ZbGt8zByK7Pvd4kRUoNgTYzRnwmPHwg=",
+      "hash": "sha256-il3ZJXuYiu2xDPlEXAI4Y7t3BGoYtyH1nVu1+7yLLp8=",
       "url": "favicon.png"
     },
     {
-      "hash": "sha256-DbpQaq68ZSb5IoPosBErM1QWBfsbTxpJqhU0REi6wP4=",
+      "hash": "sha256-pP5qgcaZvlUdDVUUurygM0BEb129PJ0hVrOhiA9e+yo=",
       "url": "icon-192.png"
     },
     {
-      "hash": "sha256-oEo6d+KqX5fjxTiZk/w9NB3Mi0+ycS5yLwCKwr4IkbA=",
+      "hash": "sha256-GkEKR02k76zAR1uHCzw0s8D/b85SMM88DsxFWw8zVtA=",
       "url": "icon-512.png"
     },
     {
