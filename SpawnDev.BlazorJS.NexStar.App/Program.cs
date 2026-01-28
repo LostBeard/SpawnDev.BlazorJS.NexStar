@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.NexStar;
 using SpawnDev.BlazorJS.NexStar.App;
+using SpawnDev.BlazorJS.NexStar.App.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddBlazorJSRuntime(out var JS);
 builder.Services.AddSingleton<NexStarService>();
 builder.Services.AddSingleton<PhoneSensorService>();
+builder.Services.AddSingleton<LocationService>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 if (JS.IsWindow)

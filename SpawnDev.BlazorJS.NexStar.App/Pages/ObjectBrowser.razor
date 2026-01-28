@@ -1,5 +1,7 @@
 @page "/objects"
+@using SpawnDev.BlazorJS.NexStar.App.Services
 @inject NexStarService NexStar
+@inject LocationService LocationService
 
 <PageTitle>Object Browser - NexStar</PageTitle>
 
@@ -155,7 +157,7 @@
         }
 
         // Filter by visibility
-        if (_showVisibleOnly && NexStar.Location != null)
+        if (_showVisibleOnly && LocationService.Location != null)
         {
             objects = objects.Where(o => IsVisible(o));
         }
@@ -181,13 +183,13 @@
 
     private AzAltCoordinates? GetAltAz(CelestialObject obj)
     {
-        if (NexStar.Location == null) return null;
+        if (LocationService.Location == null) return null;
         
         return AstronomyMath.EquatorialToHorizontal(
             obj.RightAscension, 
             obj.Declination,
-            NexStar.Location.Latitude,
-            NexStar.Location.Longitude,
+            LocationService.Location.Latitude,
+            LocationService.Location.Longitude,
             DateTime.UtcNow);
     }
 

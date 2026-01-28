@@ -1,16 +1,18 @@
 @page "/alignment"
+@using SpawnDev.BlazorJS.NexStar.App.Services
 @inject NexStarService NexStar
+@inject LocationService LocationService
 
 <PageTitle>Alignment Helper - NexStar</PageTitle>
 
 <div class="alignment-page">
     <h1>⭐ Alignment Helper</h1>
 
-    @if (NexStar.Location == null)
+    @if (LocationService.Location == null)
     {
         <div class="warning-panel">
             <h3>⚠️ Location Required</h3>
-            <p>Please set your location in <a href="settings">Settings</a> before alignment.</p>
+            <p>Please set your location in <a href="settings">Settings</a> or enable browser location permissions.</p>
         </div>
     }
     else
@@ -262,11 +264,11 @@
 
     private IEnumerable<Star> GetVisibleStars()
     {
-        if (NexStar.Location == null) return Enumerable.Empty<Star>();
+        if (LocationService.Location == null) return Enumerable.Empty<Star>();
         
         return CelestialCatalogs.GetVisibleAlignmentStars(
-            NexStar.Location.Latitude,
-            NexStar.Location.Longitude,
+            LocationService.Location.Latitude,
+            LocationService.Location.Longitude,
             DateTime.UtcNow,
             15) // Minimum 15° altitude
             .OrderBy(s => s.Magnitude);
@@ -290,10 +292,10 @@
 
     private AzAltCoordinates? GetAltAz(CelestialObject obj)
     {
-        if (NexStar.Location == null) return null;
+        if (LocationService.Location == null) return null;
         return AstronomyMath.EquatorialToHorizontal(
             obj.RightAscension, obj.Declination,
-            NexStar.Location.Latitude, NexStar.Location.Longitude,
+            LocationService.Location.Latitude, LocationService.Location.Longitude,
             DateTime.UtcNow);
     }
 
