@@ -30,7 +30,7 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
         public event Action? OnLocationChanged;
 
         // Cache browser location to avoid repeated prompts if we fall back to it
-        private GeoLocation? _cachedBrowserLocation;
+        public GeoLocation? CachedBrowserLocation { get; private set; }
 
         public LocationService(NexStarService nexStar, BlazorJSRuntime js)
         {
@@ -41,6 +41,7 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
 
         private async Task InitAsync()
         {
+            await RequestBrowserLocationAsync();
             await UpdateLocationAsync();
         }
 
@@ -66,9 +67,9 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
                 IsBrowserLocation = false;
             }
             // 2. Fallback: Browser Location
-            else if (_cachedBrowserLocation != null)
+            else if (CachedBrowserLocation != null)
             {
-                Location = _cachedBrowserLocation;
+                Location = CachedBrowserLocation;
                 IsBrowserLocation = true;
             }
             else
@@ -108,7 +109,7 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
                 var pos = await geolocation.GetCurrentPositionAsync();
                 if (pos?.Coords != null)
                 {
-                    _cachedBrowserLocation = new GeoLocation
+                    CachedBrowserLocation = new GeoLocation
                     {
                         Latitude = pos.Coords.Latitude,
                         Longitude = pos.Coords.Longitude

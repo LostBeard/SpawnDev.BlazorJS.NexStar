@@ -1,9 +1,11 @@
 @page "/level"
 @inject PhoneSensorService SensorService
 @inject NexStarService NexStar
+@inject LocationService LocationService
 @inject BlazorJSRuntime JS
 @implements IDisposable
 @using SpawnDev.BlazorJS.JSObjects
+@using SpawnDev.BlazorJS.NexStar.App.Services
 
 <PageTitle>Level & Compass</PageTitle>
 
@@ -155,13 +157,12 @@
 
         try
         {
-            using var navigator = JS.Get<SpawnDev.BlazorJS.JSObjects.Navigator>("navigator");
-            using var geolocation = navigator.Geolocation;
-            if (geolocation != null)
+            await LocationService.RequestBrowserLocationAsync();
+            var pos = LocationService.CachedBrowserLocation;
+            if (pos != null)
             {
-                var pos = await geolocation.GetCurrentPositionAsync();
-                _browserLat = pos.Coords.Latitude;
-                _browserLon = pos.Coords.Longitude;
+                _browserLat = pos.Latitude;
+                _browserLon = pos.Longitude;
             }
         }
         catch (Exception ex)
