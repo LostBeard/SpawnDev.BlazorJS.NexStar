@@ -27,6 +27,11 @@ namespace SpawnDev.BlazorJS.NexStar
         #region Public Properties
 
         /// <summary>
+        /// Gets a value indicating whether a polyfill implementation is being used.
+        /// </summary>
+        public bool UsingPolyfill { get; private set; }
+
+        /// <summary>
         /// Ready task for async initialization
         /// </summary>
         public Task Ready => _Ready ??= InitAsync();
@@ -211,9 +216,10 @@ namespace SpawnDev.BlazorJS.NexStar
                             Serial.OnConnect -= Serial_OnConnect;
                             Serial.Dispose();
                         }
-
+                        UsingPolyfill = true;
                         Serial = polyfillSerial;
-                        Serial.OnConnect += Serial_OnConnect;
+                        // the polyfill Serial interface does not support events and does not inherit from EventTarget like the real Serial interface
+                        //Serial.OnConnect += Serial_OnConnect;
                         Console.WriteLine("Web Serial Polyfill loaded for Android.");
                     }
                 }

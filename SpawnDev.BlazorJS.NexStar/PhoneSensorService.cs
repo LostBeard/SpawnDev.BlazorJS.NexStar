@@ -151,8 +151,7 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             // If we recently got absolute data (within 100ms), ignore this standard event
             // to avoid jittering between two sources.
-            // Note: Event.TimeStamp is a DOMHighResTimeStamp (double milliseconds)
-            // But we can just use simple wall clock or rely on the fact that if absolute is firing, we prefer it.
+            // Iif absolute is firing, we prefer it.
 
             // Checking if we have valid data
             double alpha = 0;
