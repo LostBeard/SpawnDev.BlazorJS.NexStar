@@ -1,6 +1,6 @@
 {
-  "name": "SpawnDev.BlazorJS.NexStar.App",
-  "short_name": "SpawnDev.BlazorJS.NexStar.App",
+  "name": "SpawnDev NexStar",
+  "short_name": "SpawnDev NexStar",
   "id": "./",
   "start_url": "./",
   "display": "standalone",
