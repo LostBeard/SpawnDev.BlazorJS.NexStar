@@ -1,6 +1,4 @@
-﻿using SpawnDev.BlazorJS.JSObjects;
-
-namespace SpawnDev.BlazorJS.NexStar
+﻿namespace SpawnDev.BlazorJS.NexStar
 {
     /// <summary>
     /// Service for communicating with and controlling Celestron NexStar telescopes
@@ -116,6 +114,16 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public event Action OnStatusChanged = default!;
 
+        /// <summary>
+        /// True when web serial is supported in the current browser
+        /// </summary>
+        public bool WebSerialSupported { get; }
+
+        /// <summary>
+        /// True when web USB is supported in the current browser
+        /// </summary>
+        public bool WebUSBSupported { get; }
+
         #endregion
 
         #region Constructor
@@ -126,6 +134,8 @@ namespace SpawnDev.BlazorJS.NexStar
         public NexStarService(BlazorJSRuntime js)
         {
             JS = js;
+            WebSerialSupported = JS.IsBrowser && !JS.IsUndefined("navigator.serial");
+            WebUSBSupported = JS.IsBrowser && !JS.IsUndefined("navigator.usb");
         }
 
         #endregion
@@ -209,60 +219,6 @@ namespace SpawnDev.BlazorJS.NexStar
                 ResetTelescopeState();
             }
         }
-
-        ///// <summary>
-        ///// Validates that a port is connected to a Celestron mount using echo command
-        ///// </summary>
-        //private async Task<bool> ValidateCelestronMountAsync(SerialPort port)
-        //{
-        //    try
-        //    {
-        //        await port.Open(SerialOptions);
-
-        //        using var writable = port.Writable;
-        //        using var writer = writable.GetWriter();
-        //        using var readable = port.Readable;
-        //        using var reader = readable.GetReader();
-
-        //        // Send echo command: K + test char
-        //        byte[] command = new byte[] { 0x4B, 0x41 }; // 'K', 'A'
-        //        await writer.Write(command);
-
-        //        var readBuffer = new List<byte>();
-        //        var startTime = DateTime.Now;
-        //        bool hashFound = false;
-
-        //        while ((DateTime.Now - startTime).TotalMilliseconds < 1000)
-        //        {
-        //            var result = await reader.Read();
-        //            if (result.Done) break;
-        //            if (result.Value != null)
-        //            {
-        //                readBuffer.AddRange(result.Value.ToArray());
-        //                if (readBuffer.Contains(0x23)) // '#'
-        //                {
-        //                    hashFound = true;
-        //                    break;
-        //                }
-        //            }
-        //        }
-
-        //        reader.ReleaseLock();
-        //        writer.ReleaseLock();
-
-        //        // Valid if we got 'A' followed by '#'
-        //        return hashFound && readBuffer.Contains(0x41);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        JS.Log($"Validation failed: {ex.Message}");
-        //    }
-        //    finally
-        //    {
-        //        try { await port.Close(); } catch { }
-        //    }
-        //    return false;
-        //}
 
         #endregion
 
