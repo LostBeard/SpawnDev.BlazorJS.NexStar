@@ -12,15 +12,12 @@ namespace SpawnDev.BlazorJS.NexStar
     {
         #region Private Fields
 
-        private CancellationTokenSource? CancelComsTokenSource = null;
+        //private CancellationTokenSource? CancelComsTokenSource = null;
+        //private WritableStreamDefaultWriter? Writer = null;
+        //private Task? ReadingTask = null;
         private Navigator navigator;
-        private WritableStreamDefaultWriter? Writer = null;
-        private Task? ReadingTask = null;
         private BlazorJSRuntime JS;
         private Task? _Ready = null;
-        private List<byte> _responseBuffer = new();
-        private TaskCompletionSource<byte[]>? _pendingResponse = null;
-        private readonly object _responseLock = new object();
 
         #endregion
 
@@ -37,14 +34,9 @@ namespace SpawnDev.BlazorJS.NexStar
         public Task Ready => _Ready ??= InitAsync();
 
         /// <summary>
-        /// Web Serial API interface
-        /// </summary>
-        public Serial? Serial { get; private set; }
-
-        /// <summary>
         /// Currently selected serial port
         /// </summary>
-        public SerialPort? SerialPort { get; private set; }
+        public ProlificSerial? SerialPort { get; private set; }
 
         /// <summary>
         /// Whether a serial port is connected and available
@@ -59,7 +51,7 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <summary>
         /// Whether communications are currently enabled
         /// </summary>
-        public bool ComsEnabled { get; private set; }
+        public bool ComsEnabled => SerialPort?.Connected == true;
 
         /// <summary>
         /// Telescope model (retrieved after connection)
@@ -113,12 +105,12 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <summary>
         /// Fired when a serial port is connected
         /// </summary>
-        public event Action<SerialPort> OnConnected = default!;
+        public event Action<ProlificSerial> OnConnected = default!;
 
         /// <summary>
         /// Fired when a serial port is disconnected
         /// </summary>
-        public event Action<SerialPort> OnDisconnected = default!;
+        public event Action<ProlificSerial> OnDisconnected = default!;
 
         /// <summary>
         /// Fired when raw data is received
@@ -129,31 +121,6 @@ namespace SpawnDev.BlazorJS.NexStar
         /// Fired when telescope status is updated
         /// </summary>
         public event Action OnStatusChanged = default!;
-
-        #endregion
-
-        #region Serial Configuration
-
-        /// <summary>
-        /// Celestron standard serial settings: 9600 baud, 8N1
-        /// </summary>
-        private readonly SerialOptions SerialOptions = new SerialOptions
-        {
-            BaudRate = 9600,
-            DataBits = 8,
-            StopBits = 1,
-            Parity = "none"
-        };
-
-        /// <summary>
-        /// USB Vendor ID filter for Prolific USB-to-Serial adapters
-        /// </summary>
-        private const int ProlificVendorId = 0x067B;
-
-        /// <summary>
-        /// Command timeout in milliseconds
-        /// </summary>
-        private const int CommandTimeoutMs = 2000;
 
         #endregion
 
@@ -171,11 +138,6 @@ namespace SpawnDev.BlazorJS.NexStar
                 return;
             }
             navigator = JS.Get<Navigator?>("navigator")!;
-            Serial = navigator!.Serial;
-            if (Serial != null)
-            {
-                Serial.OnConnect += Serial_OnConnect;
-            }
         }
 
         #endregion
@@ -189,47 +151,47 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (!JS.IsBrowser) return;
 
-            try
-            {
-                var userAgent = JS.Get<string>("navigator.userAgent");
-                var isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);
+            //try
+            //{
+            //    var userAgent = JS.Get<string>("navigator.userAgent");
+            //    var isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);
 
-                // Check if USB API is available (required for polyfill)
-                using var usb = JS.Get<USB>("navigator.usb");
-                var hasUsb = usb != null;
+            //    // Check if USB API is available (required for polyfill)
+            //    using var usb = JS.Get<USB>("navigator.usb");
+            //    var hasUsb = usb != null;
 
-                // Android Chrome usually has navigator.serial but lacks drivers for USB serial.
-                // so we force the polyfill if on Android and USB is available.
-                if (isAndroid && hasUsb)
-                {
-                    // Load the polyfill module using the library content path
-                    using var polyfillModule = await JS.Import("./_content/SpawnDev.BlazorJS.NexStar/serial.js");
+            //    // Android Chrome usually has navigator.serial but lacks drivers for USB serial.
+            //    // so we force the polyfill if on Android and USB is available.
+            //    if (isAndroid && hasUsb)
+            //    {
+            //        // Load the polyfill module using the library content path
+            //        using var polyfillModule = await JS.Import("SerialPolly", "./_content/SpawnDev.BlazorJS.NexStar/serial.js");
 
-                    // Get the exported 'serial' object
-                    var polyfillSerial = polyfillModule.GetExport<Serial>("serial");
+            //        // Get the exported 'serial' object
+            //        var polyfillSerial = polyfillModule.GetExport<Serial>("serial");
 
-                    if (polyfillSerial != null)
-                    {
-                        // Replace the native Serial instance (or null) with the polyfill
-                        if (Serial != null)
-                        {
-                            Serial.OnConnect -= Serial_OnConnect;
-                            Serial.Dispose();
-                        }
-                        UsingPolyfill = true;
-                        Serial = polyfillSerial;
-                        // the polyfill Serial interface does not support events and does not inherit from EventTarget like the real Serial interface
-                        //Serial.OnConnect += Serial_OnConnect;
-                        Console.WriteLine("Web Serial Polyfill loaded for Android.");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Web Serial Polyfill init failed: {ex.Message}");
-            }
+            //        if (polyfillSerial != null)
+            //        {
+            //            // Replace the native Serial instance (or null) with the polyfill
+            //            if (Serial != null)
+            //            {
+            //                Serial.OnConnect -= Serial_OnConnect;
+            //                Serial.Dispose();
+            //            }
+            //            UsingPolyfill = true;
+            //            Serial = polyfillSerial;
+            //            // the polyfill Serial interface does not support events and does not inherit from EventTarget like the real Serial interface
+            //            //Serial.OnConnect += Serial_OnConnect;
+            //            Console.WriteLine("Web Serial Polyfill loaded for Android.");
+            //        }
+            //    }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine($"Web Serial Polyfill init failed: {ex.Message}");
+            //}
 
-            await UpdateAsync();
+            //await UpdateAsync();
         }
 
         #endregion
@@ -242,35 +204,34 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <returns>True if a valid NexStar port was selected</returns>
         public async Task<bool> SelectPortAsync()
         {
-            if (Serial == null) return false;
-
-            SerialPort? serialPort = null;
+            //if (SerialPort != null) return true;
+            ProlificSerial? serialPort = null;
             try
             {
-                serialPort = await Serial.RequestPort();
+                serialPort = await ProlificSerial.OpenWithWebSerial();
             }
             catch
             {
                 return false;
             }
-
             if (serialPort != null)
             {
-                var isCelestron = await ValidateCelestronMountAsync(serialPort);
-                if (isCelestron)
+                if (SerialPort != null)
                 {
-                    if (SerialPort != null)
-                    {
-                        await StopComsAsync();
-                        SerialPort!.OnDisconnect -= SerialPort_OnDisconnect;
-                        OnDisconnected?.Invoke(SerialPort);
-                        SerialPort = null;
-                    }
-                    SerialPort = serialPort;
-                    SerialPort.OnDisconnect += SerialPort_OnDisconnect;
-                    OnConnected?.Invoke(SerialPort);
-                    return true;
+                    await SerialPort.CloseAsync();
+                    SerialPort!.OnDisconnect -= SerialPort_OnDisconnect;
+                    OnDisconnected?.Invoke(SerialPort);
+                    SerialPort = null;
                 }
+                SerialPort = serialPort;
+                SerialPort.OnDisconnect += SerialPort_OnDisconnect;
+                OnConnected?.Invoke(SerialPort);
+                await RefreshTelescopeInfoAsync();
+                await GetRaDecAsync();
+                await GetAzAltAsync();
+                await GetTimeAsync();
+                await GetLocationAsync();
+                return true;
             }
             return false;
         }
@@ -282,147 +243,73 @@ namespace SpawnDev.BlazorJS.NexStar
         {
             if (SerialPort != null)
             {
-                await StopComsAsync();
-                SerialPort!.OnDisconnect -= SerialPort_OnDisconnect;
-                OnDisconnected?.Invoke(SerialPort);
-                await SerialPort.Forget();
+                var serialPort = SerialPort;
+                await serialPort.CloseAsync();
+                serialPort.OnDisconnect -= SerialPort_OnDisconnect;
+                OnDisconnected?.Invoke(serialPort);
                 SerialPort = null;
+                await serialPort.Forget();
                 ResetTelescopeState();
             }
         }
 
-        /// <summary>
-        /// Validates that a port is connected to a Celestron mount using echo command
-        /// </summary>
-        private async Task<bool> ValidateCelestronMountAsync(SerialPort port)
-        {
-            try
-            {
-                await port.Open(SerialOptions);
+        ///// <summary>
+        ///// Validates that a port is connected to a Celestron mount using echo command
+        ///// </summary>
+        //private async Task<bool> ValidateCelestronMountAsync(SerialPort port)
+        //{
+        //    try
+        //    {
+        //        await port.Open(SerialOptions);
 
-                using var writable = port.Writable;
-                using var writer = writable.GetWriter();
-                using var readable = port.Readable;
-                using var reader = readable.GetReader();
+        //        using var writable = port.Writable;
+        //        using var writer = writable.GetWriter();
+        //        using var readable = port.Readable;
+        //        using var reader = readable.GetReader();
 
-                // Send echo command: K + test char
-                byte[] command = new byte[] { 0x4B, 0x41 }; // 'K', 'A'
-                await writer.Write(command);
+        //        // Send echo command: K + test char
+        //        byte[] command = new byte[] { 0x4B, 0x41 }; // 'K', 'A'
+        //        await writer.Write(command);
 
-                var readBuffer = new List<byte>();
-                var startTime = DateTime.Now;
-                bool hashFound = false;
+        //        var readBuffer = new List<byte>();
+        //        var startTime = DateTime.Now;
+        //        bool hashFound = false;
 
-                while ((DateTime.Now - startTime).TotalMilliseconds < 1000)
-                {
-                    var result = await reader.Read();
-                    if (result.Done) break;
-                    if (result.Value != null)
-                    {
-                        readBuffer.AddRange(result.Value.ToArray());
-                        if (readBuffer.Contains(0x23)) // '#'
-                        {
-                            hashFound = true;
-                            break;
-                        }
-                    }
-                }
+        //        while ((DateTime.Now - startTime).TotalMilliseconds < 1000)
+        //        {
+        //            var result = await reader.Read();
+        //            if (result.Done) break;
+        //            if (result.Value != null)
+        //            {
+        //                readBuffer.AddRange(result.Value.ToArray());
+        //                if (readBuffer.Contains(0x23)) // '#'
+        //                {
+        //                    hashFound = true;
+        //                    break;
+        //                }
+        //            }
+        //        }
 
-                reader.ReleaseLock();
-                writer.ReleaseLock();
+        //        reader.ReleaseLock();
+        //        writer.ReleaseLock();
 
-                // Valid if we got 'A' followed by '#'
-                return hashFound && readBuffer.Contains(0x41);
-            }
-            catch (Exception ex)
-            {
-                JS.Log($"Validation failed: {ex.Message}");
-            }
-            finally
-            {
-                try { await port.Close(); } catch { }
-            }
-            return false;
-        }
+        //        // Valid if we got 'A' followed by '#'
+        //        return hashFound && readBuffer.Contains(0x41);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        JS.Log($"Validation failed: {ex.Message}");
+        //    }
+        //    finally
+        //    {
+        //        try { await port.Close(); } catch { }
+        //    }
+        //    return false;
+        //}
 
         #endregion
 
-        #region Communication Control
-
-        /// <summary>
-        /// Starts communication with the telescope
-        /// </summary>
-        public async Task StartComsAsync()
-        {
-            var port = SerialPort;
-            if (ComsEnabled || port == null) return;
-            ComsEnabled = true;
-
-            try
-            {
-                await port.Open(SerialOptions);
-            }
-            catch (Exception ex)
-            {
-                JS.Log("StartComs failed. Cannot open port.", ex.Message);
-                ComsEnabled = false;
-                return;
-            }
-
-            try
-            {
-                Writer = port.Writable.GetWriter();
-            }
-            catch (Exception ex)
-            {
-                JS.Log("GetWriter failed", ex.Message);
-                try { await port.Close(); } catch { }
-                ComsEnabled = false;
-                return;
-            }
-
-            CancelComsTokenSource = new CancellationTokenSource();
-            ReadingTask = ReadLoopAsync(port, CancelComsTokenSource.Token);
-
-            // Initialize telescope state
-            await RefreshTelescopeInfoAsync();
-            OnStatusChanged?.Invoke();
-        }
-
-        /// <summary>
-        /// Stops communication with the telescope
-        /// </summary>
-        public async Task StopComsAsync()
-        {
-            if (!ComsEnabled) return;
-            ComsEnabled = false;
-
-            var cts = CancelComsTokenSource;
-            CancelComsTokenSource = null;
-            cts?.Cancel();
-
-            var rt = ReadingTask;
-            ReadingTask = null;
-
-            Writer?.ReleaseLock();
-            Writer?.Dispose();
-            Writer = null;
-
-            if (rt != null)
-            {
-                try { await rt; } catch { }
-            }
-
-            if (SerialPort != null && SerialPort.Connected)
-            {
-                try { await SerialPort.Close(); } catch { }
-            }
-
-            cts?.Dispose();
-            ResetTelescopeState();
-            OnStatusChanged?.Invoke();
-        }
-
+        #region
         private void ResetTelescopeState()
         {
             Model = TelescopeModel.Unknown;
@@ -438,110 +325,6 @@ namespace SpawnDev.BlazorJS.NexStar
 
         #endregion
 
-        #region Low-Level Communication
-
-        /// <summary>
-        /// Sends a command and waits for response terminated by '#'
-        /// </summary>
-        private async Task<byte[]?> SendCommandAsync(byte[] command, int timeoutMs = CommandTimeoutMs)
-        {
-            if (Writer == null || !ComsEnabled) return null;
-
-            lock (_responseLock)
-            {
-                _responseBuffer.Clear();
-                _pendingResponse = new TaskCompletionSource<byte[]>();
-            }
-
-            try
-            {
-                await Writer.Ready;
-                await Writer.Write(command);
-
-                using var cts = new CancellationTokenSource(timeoutMs);
-                cts.Token.Register(() => _pendingResponse?.TrySetCanceled());
-
-                return await _pendingResponse.Task;
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
-            catch (Exception ex)
-            {
-                JS.Log($"SendCommand error: {ex.Message}");
-                return null;
-            }
-            finally
-            {
-                lock (_responseLock)
-                {
-                    _pendingResponse = null;
-                }
-            }
-        }
-
-
-        /// <summary>
-        /// Sends a string command and returns string response
-        /// </summary>
-        private async Task<string?> SendStringCommandAsync(string command)
-        {
-            var response = await SendCommandAsync(Encoding.ASCII.GetBytes(command));
-            if (response == null) return null;
-            return Encoding.ASCII.GetString(response).TrimEnd('#');
-        }
-
-        /// <summary>
-        /// Background read loop
-        /// </summary>
-        private async Task ReadLoopAsync(SerialPort port, CancellationToken token)
-        {
-            ReadableStream? readable;
-            ReadableStreamDefaultReader? reader = null;
-            token.Register(() => reader?.Cancel());
-
-            while (!token.IsCancellationRequested && (readable = port.Readable) != null)
-            {
-                reader = readable.GetReader();
-                try
-                {
-                    while (true)
-                    {
-                        using var readResponse = await reader.Read();
-                        if (readResponse.Done) break;
-
-                        var value = readResponse.Value;
-                        if (value != null)
-                        {
-                            var bytes = value.ToArray();
-                            OnData?.Invoke(bytes);
-
-                            lock (_responseLock)
-                            {
-                                _responseBuffer.AddRange(bytes);
-
-                                // Check for terminator
-                                int terminatorIndex = _responseBuffer.IndexOf((byte)'#');
-                                if (terminatorIndex >= 0 && _pendingResponse != null)
-                                {
-                                    var response = _responseBuffer.Take(terminatorIndex + 1).ToArray();
-                                    _responseBuffer.RemoveRange(0, terminatorIndex + 1);
-                                    _pendingResponse.TrySetResult(response);
-                                }
-                            }
-                        }
-                    }
-                    reader.ReleaseLock();
-                }
-                catch
-                {
-                    try { reader.ReleaseLock(); } catch { }
-                }
-            }
-        }
-
-        #endregion
 
         #region Telescope Commands - Basic
 
@@ -561,7 +344,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<string?> GetVersionAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'V' });
+            if (SerialPort == null) return null;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'V' });
             if (response == null || response.Length < 2) return null;
 
             VersionMajor = response[0];
@@ -576,7 +360,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<TelescopeModel> GetModelAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'m' });
+            if (SerialPort == null) return TelescopeModel.Unknown;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'m' });
             if (response == null || response.Length < 2) return TelescopeModel.Unknown;
 
             var modelId = response[0];
@@ -592,7 +377,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<char?> EchoAsync(char testChar)
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'K', (byte)testChar });
+            if (SerialPort == null) return null;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'K', (byte)testChar });
             if (response == null || response.Length < 2) return null;
             return (char)response[0];
         }
@@ -602,7 +388,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> GetAlignmentStatusAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'J' });
+            if (SerialPort == null) return false;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'J' });
             if (response == null || response.Length < 2) return false;
             IsAligned = response[0] == 1;
             OnStatusChanged?.Invoke();
@@ -614,7 +401,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> IsGotoInProgressAsync()
         {
-            var response = await SendStringCommandAsync("L");
+            if (SerialPort == null) return false;
+            var response = await SerialPort.SendStringCommandAsync("L");
             return response == "1";
         }
 
@@ -623,7 +411,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> CancelGotoAsync()
         {
-            var response = await SendStringCommandAsync("M");
+            if (SerialPort == null) return false;
+            var response = await SerialPort.SendStringCommandAsync("M");
             return response != null;
         }
 
@@ -637,8 +426,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <param name="precise">Use precise (32-bit) format for sub-arcsecond accuracy</param>
         public async Task<RaDecCoordinates?> GetRaDecAsync(bool precise = false)
         {
+            if (SerialPort == null) return null;
             var cmd = precise ? "e" : "E";
-            var response = await SendStringCommandAsync(cmd);
+            var response = await SerialPort.SendStringCommandAsync(cmd);
             if (response == null) return null;
 
             var (ra, dec) = NexStarProtocol.ParsePositionResponse(response);
@@ -653,8 +443,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <param name="precise">Use precise (32-bit) format for sub-arcsecond accuracy</param>
         public async Task<AzAltCoordinates?> GetAzAltAsync(bool precise = false)
         {
+            if (SerialPort == null) return null;
             var cmd = precise ? "z" : "Z";
-            var response = await SendStringCommandAsync(cmd);
+            var response = await SerialPort.SendStringCommandAsync(cmd);
             if (response == null) return null;
 
             var (az, alt) = NexStarProtocol.ParsePositionResponse(response);
@@ -668,9 +459,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> GotoRaDecAsync(double ra, double dec, bool precise = false)
         {
+            if (SerialPort == null) return false;
             if (ra < 0 || ra > 360 || dec < -90 || dec > 90) return false;
             var command = NexStarProtocol.FormatGotoRaDecCommand(ra, dec, precise);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -679,9 +471,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> GotoAzAltAsync(double az, double alt, bool precise = false)
         {
+            if (SerialPort == null) return false;
             if (az < 0 || az > 360 || alt < -90 || alt > 90) return false;
             var command = NexStarProtocol.FormatGotoAzAltCommand(az, alt, precise);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -690,9 +483,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SyncRaDecAsync(double ra, double dec, bool precise = false)
         {
+            if (SerialPort == null) return false;
             if (ra < 0 || ra > 360 || dec < -90 || dec > 90) return false;
             var command = NexStarProtocol.FormatSyncRaDecCommand(ra, dec, precise);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -705,8 +499,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SlewFixedAsync(SlewAxis axis, SlewDirection direction, SlewRate rate)
         {
+            if (SerialPort == null) return false;
             var command = NexStarProtocol.FormatFixedSlewCommand(axis, direction, rate);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -718,8 +513,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <param name="rateArcsecPerSec">Rate in arcseconds per second (max ~16000)</param>
         public async Task<bool> SlewVariableAsync(SlewAxis axis, SlewDirection direction, double rateArcsecPerSec)
         {
+            if (SerialPort == null) return false;
             var command = NexStarProtocol.FormatVariableSlewCommand(axis, direction, rateArcsecPerSec);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -749,7 +545,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<TrackingMode> GetTrackingModeAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'t' });
+            if (SerialPort == null) return TrackingMode.Off;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'t' });
             if (response == null || response.Length < 2) return TrackingMode.Off;
 
             CurrentTrackingMode = response[0] switch
@@ -769,8 +566,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SetTrackingModeAsync(TrackingMode mode)
         {
+            if (SerialPort == null) return false;
             var command = new byte[] { (byte)'T', (byte)mode };
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             if (response != null)
             {
                 CurrentTrackingMode = mode;
@@ -788,7 +586,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<TelescopeTime?> GetTimeAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'h' });
+            if (SerialPort == null) return null;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'h' });
             if (response == null || response.Length < 9) return null;
             return NexStarProtocol.ParseTimeResponse(response);
         }
@@ -798,8 +597,9 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SetTimeAsync(DateTime time, int tzOffset, bool dst)
         {
+            if (SerialPort == null) return false;
             var command = NexStarProtocol.FormatSetTimeCommand(time, tzOffset, dst);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             return response != null;
         }
 
@@ -819,7 +619,8 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<GeoLocation?> GetLocationAsync()
         {
-            var response = await SendCommandAsync(new byte[] { (byte)'w' });
+            if (SerialPort == null) return null;
+            var response = await SerialPort.SendCommandAsync(new byte[] { (byte)'w' });
             if (response == null || response.Length < 9) return null;
             Location = NexStarProtocol.ParseLocationResponse(response);
             OnStatusChanged?.Invoke();
@@ -831,9 +632,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// </summary>
         public async Task<bool> SetLocationAsync(double lat, double lon)
         {
+            if (SerialPort == null) return false;
             if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return false;
             var command = NexStarProtocol.FormatSetLocationCommand(lat, lon);
-            var response = await SendCommandAsync(command);
+            var response = await SerialPort.SendCommandAsync(command);
             if (response != null)
             {
                 Location = new GeoLocation(lat, lon);
@@ -902,71 +704,39 @@ namespace SpawnDev.BlazorJS.NexStar
 
         #region Event Handlers
 
+        //private async Task UpdateAsync()
+        //{
+        //    if (Serial == null) return;
 
+        //    var ports = (await Serial.GetPorts()).ToArray();
+        //    var serialPort = ports.FirstOrDefault();
+        //    if (serialPort != null && SerialPort == null)
+        //    {
+        //        SerialPort = serialPort;
+        //        SerialPort.OnDisconnect += SerialPort_OnDisconnect;
+        //        OnConnected?.Invoke(SerialPort);
+        //    }
+        //}
 
-        private async Task UpdateAsync()
+        //private void Serial_OnConnect(Event e)
+        //{
+        //    var serialPort = e.TargetAs<SerialPort>();
+        //    if (SerialPort == null && serialPort != null)
+        //    {
+        //        SerialPort = serialPort;
+        //        SerialPort.OnDisconnect += SerialPort_OnDisconnect;
+        //        OnConnected?.Invoke(SerialPort);
+        //    }
+        //}
+
+        private async void SerialPort_OnDisconnect(ProlificSerial e)
         {
-            if (Serial == null) return;
-
-            var ports = (await Serial.GetPorts()).ToArray();
-            var serialPort = ports.FirstOrDefault();
-            if (serialPort != null && SerialPort == null)
+            //await StopComsAsync();
+            if (SerialPort == e)
             {
-                SerialPort = serialPort;
-                SerialPort.OnDisconnect += SerialPort_OnDisconnect;
-                OnConnected?.Invoke(SerialPort);
+                _ = DeselectPortAsync();
             }
         }
-
-        private void Serial_OnConnect(Event e)
-        {
-            var serialPort = e.TargetAs<SerialPort>();
-            if (SerialPort == null && serialPort != null)
-            {
-                SerialPort = serialPort;
-                SerialPort.OnDisconnect += SerialPort_OnDisconnect;
-                OnConnected?.Invoke(SerialPort);
-            }
-        }
-
-        private async void SerialPort_OnDisconnect(Event e)
-        {
-            await StopComsAsync();
-            if (SerialPort != null)
-            {
-                SerialPort.OnDisconnect -= SerialPort_OnDisconnect;
-                OnDisconnected?.Invoke(SerialPort);
-                SerialPort = null;
-            }
-        }
-
-        #endregion
-
-        #region Legacy Compatibility
-
-        /// <summary>
-        /// Legacy: Start communications
-        /// </summary>
-        [Obsolete("Use StartComsAsync instead")]
-        public Task StartComs() => StartComsAsync();
-
-        /// <summary>
-        /// Legacy: Stop communications
-        /// </summary>
-        [Obsolete("Use StopComsAsync instead")]
-        public Task StopComs() => StopComsAsync();
-
-        /// <summary>
-        /// Legacy: Select port
-        /// </summary>
-        [Obsolete("Use SelectPortAsync instead")]
-        public Task<bool> SelectPort() => SelectPortAsync();
-
-        /// <summary>
-        /// Legacy: Deselect port
-        /// </summary>
-        [Obsolete("Use DeselectPortAsync instead")]
-        public Task DeselectPort() => DeselectPortAsync();
 
         #endregion
     }

@@ -34,7 +34,7 @@
             <div class="button-row">
                 @if (!NexStar.SerialPortSelected)
                 {
-                    <button class="btn btn-primary" @onclick="SelectPort" disabled="@_isLoading">
+                    <button class="btn btn-primary" @onclick="Connect" disabled="@_isLoading">
                         <span class="icon">🔌</span> Select Port
                     </button>
                 }
@@ -378,27 +378,27 @@
         StateHasChanged();
     }
 
-    private async Task SelectPort()
-    {
-        _isLoading = true;
-        _statusMessage = "Selecting port...";
-        _statusClass = "info";
-        StateHasChanged();
+    // private async Task SelectPort()
+    // {
+    //     _isLoading = true;
+    //     _statusMessage = "Selecting port...";
+    //     _statusClass = "info";
+    //     StateHasChanged();
 
-        var result = await NexStar.SelectPortAsync();
-        if (result)
-        {
-            _statusMessage = "Port selected. Click Connect to start.";
-            _statusClass = "success";
-        }
-        else
-        {
-            _statusMessage = "No compatible port selected.";
-            _statusClass = "error";
-        }
-        _isLoading = false;
-        StateHasChanged();
-    }
+    //     var result = await NexStar.SelectPortAsync();
+    //     if (result)
+    //     {
+    //         _statusMessage = "Port selected. Click Connect to start.";
+    //         _statusClass = "success";
+    //     }
+    //     else
+    //     {
+    //         _statusMessage = "No compatible port selected.";
+    //         _statusClass = "error";
+    //     }
+    //     _isLoading = false;
+    //     StateHasChanged();
+    // }
 
     private async Task DeselectPort()
     {
@@ -416,13 +416,12 @@
         _statusClass = "info";
         StateHasChanged();
 
-        await NexStar.StartComsAsync();
+        await NexStar.SelectPortAsync();
 
         if (NexStar.ComsEnabled)
         {
             _statusMessage = $"Connected to {NexStar.Model.GetDisplayName()}";
             _statusClass = "success";
-            await UpdatePosition();
             await UpdatePosition();
             await GetTime();
             await NexStar.GetLocationAsync();
@@ -442,7 +441,7 @@
     {
         _isLoading = true;
         _positionTimer?.Stop();
-        await NexStar.StopComsAsync();
+        await NexStar.DeselectPortAsync();
         _statusMessage = "Disconnected.";
         _statusClass = "info";
         _isLoading = false;
