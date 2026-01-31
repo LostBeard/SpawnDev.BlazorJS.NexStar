@@ -14,8 +14,6 @@ Built on top of [SpawnDev.BlazorJS](https://github.com/LostBeard/SpawnDev.Blazor
 The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progressive Web App (PWA) demonstrating the library's capabilities.
 
 ### App Features:
-- **Dark Mode**: 
-  - Optimized dark red/black UI for viewing in low light environments.
 - **Telescope Control**: 
   - Complete directional slewing with variable rates.
   - GoTo coordinates (RA/Dec).
@@ -31,6 +29,8 @@ The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progres
   - Sync telescope time and location with browser data.
 - **Fallback USB Support**: 
   - For Android devices, uses Web USB API to connect via Prolific PL2303 driver.
+- **Dark Mode**: 
+  - Optimized dark red/black UI for viewing in low light environments.
 
 ---
 
