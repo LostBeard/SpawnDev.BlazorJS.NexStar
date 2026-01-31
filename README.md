@@ -87,7 +87,7 @@ await builder.Build().BlazorJSRunAsync();
     {
         if (await NexStar.SelectPortAsync())
         {
-            await NexStar.StartComsAsync();
+            
         }
     }
 }
@@ -95,7 +95,14 @@ await builder.Build().BlazorJSRunAsync();
 
 ### Requirements
 - A browser with **Web Serial API** support (Chrome, Edge, Opera).
+- A browser with **Web USB API** support (Chrome on Android).
 - A Celestron NexStar telescope (or compatible mount).
 - A valid customized USB-Serial cable or connection.
+
+### Tested Platforms
+- **Windows (Chrome)**: Verified working with Web Serial API.
+- **Android (Chrome)**: Verified working with Web USB API (using minimal PL2303 driver).
+- **Web Serial**: Generic Support
+- **Web USB**: Generic Prolific PL2303 Support
 
 

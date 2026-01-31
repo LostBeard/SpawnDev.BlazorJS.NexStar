@@ -372,28 +372,6 @@
         StateHasChanged();
     }
 
-    // private async Task SelectPort()
-    // {
-    //     _isLoading = true;
-    //     _statusMessage = "Selecting port...";
-    //     _statusClass = "info";
-    //     StateHasChanged();
-
-    //     var result = await NexStar.SelectPortAsync();
-    //     if (result)
-    //     {
-    //         _statusMessage = "Port selected. Click Connect to start.";
-    //         _statusClass = "success";
-    //     }
-    //     else
-    //     {
-    //         _statusMessage = "No compatible port selected.";
-    //         _statusClass = "error";
-    //     }
-    //     _isLoading = false;
-    //     StateHasChanged();
-    // }
-
     private async Task DeselectPort()
     {
         _isLoading = true;
