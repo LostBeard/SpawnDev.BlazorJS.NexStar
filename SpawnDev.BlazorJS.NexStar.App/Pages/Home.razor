@@ -32,19 +32,13 @@
         <section class="panel connection-panel">
             <h2>Connection</h2>
             <div class="button-row">
-                @if (!NexStar.SerialPortSelected)
+                @if (!NexStar.SerialPortSelected || !NexStar.ComsEnabled)
                 {
-                    <button class="btn btn-primary" @onclick="Connect" disabled="@_isLoading">
-                        <span class="icon">🔌</span> Select Port
+                    <button class="btn btn-primary" @onclick="ConnectSerial" disabled="@_isLoading">
+                        <span class="icon">🔌</span> Connect Serial
                     </button>
-                }
-                else if (!NexStar.ComsEnabled)
-                {
-                    <button class="btn btn-success" @onclick="Connect" disabled="@_isLoading">
-                        <span class="icon">▶</span> Connect
-                    </button>
-                    <button class="btn btn-secondary" @onclick="DeselectPort" disabled="@_isLoading">
-                        <span class="icon">✕</span> Change Port
+                    <button class="btn btn-primary" @onclick="ConnectUSB" disabled="@_isLoading">
+                        <span class="icon">🔌</span> Connect USB
                     </button>
                 }
                 else
@@ -409,14 +403,16 @@
         StateHasChanged();
     }
 
-    private async Task Connect()
+    private Task ConnectUSB() => Connect(true);
+    private Task ConnectSerial() => Connect(false);
+    private async Task Connect(bool useWebUSB = false)
     {
         _isLoading = true;
         _statusMessage = "Connecting...";
         _statusClass = "info";
         StateHasChanged();
 
-        await NexStar.SelectPortAsync();
+        await NexStar.SelectPortAsync(useWebUSB);
 
         if (NexStar.ComsEnabled)
         {

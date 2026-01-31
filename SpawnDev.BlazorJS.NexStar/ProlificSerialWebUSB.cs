@@ -1,18 +1,24 @@
-﻿using SpawnDev.BlazorJS.JSObjects;
+using SpawnDev.BlazorJS.JSObjects;
 using System.Text;
 
 namespace SpawnDev.BlazorJS.NexStar;
+
 /// <summary>
-/// Prolific PL2303 USB-to-Serial adapter support.
+/// Prolific PL2303 USB-to-Serial adapter support via Web USB API.
 /// </summary>
 public class ProlificSerialWebUSB : ProlificSerial
 {
     private readonly USBDevice _device;
     private USBEndpoint? _inEndpoint;
     private USBEndpoint? _outEndpoint;
-    private bool _isOpen = false;
+    private bool ComsEnabled = false;
+    private CancellationTokenSource? _cancelComsTokenSource;
+    private Task? _readingTask;
+    private readonly List<byte> _responseBuffer = new();
+    private TaskCompletionSource<byte[]>? _pendingResponse;
+    private readonly SemaphoreSlim _commandLimiter = new(1, 1);
 
-    public override bool Connected => _isOpen && _device?.Opened == true;
+    public override bool Connected => ComsEnabled && _device?.Opened == true;
 
     // PL2303 Standard Requests
     private const byte SET_LINE_CODING = 0x20;
@@ -27,17 +33,16 @@ public class ProlificSerialWebUSB : ProlificSerial
         _device = device;
     }
     /// <summary>
-    /// Open the PL2303 device with the specified baud rate.gg
+    /// Open the PL2303 device with the specified baud rate.
     /// </summary>
     /// <param name="serialOptions"></param>
     /// <returns></returns>
-    /// <exception cref="Exception"></exception>
     public override async Task<bool> OpenAsync(SerialOptions? serialOptions = null)
     {
         if (_device == null) return false;
         if (Connected) return true;
-        if (_isOpen) return false;
-        _isOpen = true;
+        if (ComsEnabled) return false;
+
         try
         {
             serialOptions ??= DefaultSerialOptions;
@@ -50,7 +55,7 @@ public class ProlificSerialWebUSB : ProlificSerial
             await _device.ClaimInterface(0);
 
             // --- 1. PROLIFIC INITIALIZATION SEQUENCE ---
-            // The PL2303 (especially "Controller D" / HX revs) requires a specific 
+            // The PL2303 (especially "Controller D" / HX revs) requires a specific
             // vendor read/write "dance" to enable the serial engine.
             // Without this, the bulk endpoints will silently drop data.
 
@@ -58,7 +63,6 @@ public class ProlificSerialWebUSB : ProlificSerial
             await VendorWrite(1, 0);
 
             // Read/Write loop often seen in Linux drivers to wake up HX/D chips
-            // We perform the standard "wakeup" calls.
             await VendorRead(0x8484, 0);
             await VendorWrite(0x0404, 0);
             await VendorRead(0x8484, 0);
@@ -79,11 +83,7 @@ public class ProlificSerialWebUSB : ProlificSerial
             await SetSerialOptionsAsync(serialOptions);
 
             // --- 3. ENDPOINT DISCOVERY ---
-            // We need to find the Bulk IN and Bulk OUT endpoints dynamically.
-            // PL2303 usually uses Endpoints 2 (OUT) and 3 (IN) or 1 (IN INTERRUPT).
-            // We specifically look for BULK types.
             var iface = _device.Configuration!.Interfaces![0];
-            // Note: Alternates is an Array, we usually want the first one (Active)
             var alt = iface.Alternates![0];
 
             foreach (var ep in alt.Endpoints!)
@@ -98,20 +98,21 @@ public class ProlificSerialWebUSB : ProlificSerial
             if (_inEndpoint == null || _outEndpoint == null)
                 throw new Exception("PL2303 Bulk Endpoints not found. Interface might be claimed by OS driver?");
 
+            // --- 4. START READ LOOP ---
+            _cancelComsTokenSource = new CancellationTokenSource();
+            _readingTask = ReadLoopAsync(_cancelComsTokenSource.Token);
+
+            ComsEnabled = true;
+            StatusChanged();
+            ConnectedEvent();
             return true;
         }
         catch (Exception ex)
         {
-            _isOpen = false;
+            JS.Log("ProlificSerialWebUSB Open failed", ex.Message);
+            await CloseAsync();
+            return false;
         }
-        finally
-        {
-            if (!_isOpen)
-            {
-                await CloseAsync();
-            }
-        }
-        return false;
     }
     /// <summary>
     /// Set the SerialOptions for the PL2303 device.
@@ -166,37 +167,28 @@ public class ProlificSerialWebUSB : ProlificSerial
         await _device.ControlTransferOut(setup, jsBuffer);
     }
     /// <summary>
-    /// Write data to the PL2303 device.
+    /// Write bytes to the PL2303 device.
     /// </summary>
-    /// <param name="data"></param>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException"></exception>
-    protected async Task WriteAsync(string data)
+    private async Task WriteBytesAsync(byte[] data)
     {
-        if (!_isOpen || _outEndpoint == null) throw new InvalidOperationException("Port not open");
-
-        var bytes = Encoding.UTF8.GetBytes(data);
-        using var jsBuffer = new Uint8Array(bytes);
-
-        // transferOut returns USBOutTransferResult
+        if (!ComsEnabled || _outEndpoint == null) throw new InvalidOperationException("Port not open");
+        using var jsBuffer = new Uint8Array(data);
         await _device.TransferOut(_outEndpoint.EndpointNumber, jsBuffer);
     }
+
     /// <summary>
     /// Read data from the PL2303 device.
     /// </summary>
-    /// <param name="maxLen"></param>
-    /// <returns></returns>
-    protected async Task<byte[]?> ReadAsync(int maxLen = 64)
+    private async Task<byte[]?> ReadAsync(int maxLen = 64)
     {
-        if (!_isOpen || _inEndpoint == null || _device == null) return null;
+        if (!ComsEnabled || _inEndpoint == null || _device == null) return null;
         try
         {
-            // transferIn returns USBInTransferResult
             var result = await _device.TransferIn(_inEndpoint.EndpointNumber, maxLen);
-            if (result.Status == "ok")
+            if (result.Status == "ok" && result.Data != null)
             {
                 using var dataView = result.Data;
-                return dataView?.ReadBytes();
+                return dataView.ReadBytes();
             }
         }
         catch (Exception)
@@ -204,6 +196,45 @@ public class ProlificSerialWebUSB : ProlificSerial
             // Timeout or device disconnected
         }
         return null;
+    }
+
+    /// <summary>
+    /// Background read loop: drains IN endpoint, buffers data, completes pending response on '#'.
+    /// </summary>
+    private async Task ReadLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested && ComsEnabled)
+        {
+            try
+            {
+                var data = await ReadAsync(64);
+                if (data == null || data.Length == 0)
+                {
+                    await Task.Delay(10, token);
+                    continue;
+                }
+
+                DataReceived(data);
+                _responseBuffer.AddRange(data);
+
+                int terminatorIndex = _responseBuffer.IndexOf((byte)'#');
+                if (terminatorIndex >= 0 && _pendingResponse != null)
+                {
+                    var response = _responseBuffer.Take(terminatorIndex + 1).ToArray();
+                    _responseBuffer.RemoveRange(0, terminatorIndex + 1);
+                    _pendingResponse.TrySetResult(response);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception)
+            {
+                if (!ComsEnabled) break;
+                await Task.Delay(50);
+            }
+        }
     }
 
     // --- Helpers for Vendor Control Transfers ---
@@ -237,26 +268,86 @@ public class ProlificSerialWebUSB : ProlificSerial
         await _device.ControlTransferIn(setup, 1);
     }
 
+    /// <summary>
+    /// Stops communication with the device.
+    /// </summary>
     public override async Task CloseAsync()
     {
-        _isOpen = false;
-        if (_device != null)
+        if (!ComsEnabled && (_device == null || !_device.Opened))
+            return;
+
+        ComsEnabled = false;
+
+        var cts = _cancelComsTokenSource;
+        _cancelComsTokenSource = null;
+        cts?.Cancel();
+
+        var rt = _readingTask;
+        _readingTask = null;
+
+        if (rt != null)
         {
-            if (_device.Opened)
-            {
-                try { await _device.Close(); } catch { }
-            }
+            try { await rt; } catch { }
+        }
+
+        cts?.Dispose();
+
+        if (_device != null && _device.Opened)
+        {
+            try { await _device.Close(); } catch { }
+        }
+
+        StatusChanged();
+        DisconnectedEvent();
+    }
+
+    /// <summary>
+    /// Sends a command and waits for response terminated by '#'.
+    /// </summary>
+    public override async Task<byte[]?> SendCommandAsync(byte[] command, int timeoutMs = CommandTimeoutMs)
+    {
+        if (!ComsEnabled || _outEndpoint == null) return null;
+
+        var haveLock = false;
+        try
+        {
+            await _commandLimiter.WaitAsync();
+            haveLock = true;
+
+            _responseBuffer.Clear();
+            _pendingResponse = new TaskCompletionSource<byte[]>();
+
+            await WriteBytesAsync(command);
+
+            using var cts = new CancellationTokenSource(timeoutMs);
+            cts.Token.Register(() => _pendingResponse?.TrySetCanceled());
+
+            return await _pendingResponse.Task;
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            JS.Log($"SendCommand error: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            _pendingResponse = null;
+            if (haveLock)
+                _commandLimiter.Release();
         }
     }
 
-    public override Task<string?> SendStringCommandAsync(string data, int timeoutMs = 2000)
+    /// <summary>
+    /// Sends a string command and returns string response.
+    /// </summary>
+    public override async Task<string?> SendStringCommandAsync(string data, int timeoutMs = CommandTimeoutMs)
     {
-        throw new NotImplementedException();
-    }
-
-    public override async Task<byte[]?> SendCommandAsync(byte[] command, int timeoutMs = 2000)
-    {
-        throw new NotImplementedException();
-        //await WriteAsync(Encoding.UTF8.GetString(command));
+        var response = await SendCommandAsync(Encoding.ASCII.GetBytes(data), timeoutMs);
+        if (response == null) return null;
+        return Encoding.ASCII.GetString(response).TrimEnd('#');
     }
 }
