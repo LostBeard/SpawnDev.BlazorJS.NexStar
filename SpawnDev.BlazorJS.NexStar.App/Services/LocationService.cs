@@ -1,5 +1,4 @@
 using SpawnDev.BlazorJS.JSObjects;
-using SpawnDev.BlazorJS.NexStar.App.Services;
 
 namespace SpawnDev.BlazorJS.NexStar.App.Services
 {
@@ -48,7 +47,7 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
         private void NexStar_OnStatusChanged()
         {
             // If telescope location changes (or disconnects), re-eval our effective location
-             _ = UpdateLocationAsync();
+            _ = UpdateLocationAsync();
         }
 
         /// <summary>
@@ -82,7 +81,7 @@ namespace SpawnDev.BlazorJS.NexStar.App.Services
                 // Let's rely on explicit "RequestBrowserLocation" or prior cache. 
                 // However, user asked for "fallback to browser's location". 
                 // We'll check if we have permission? 
-                
+
                 // For now, assume null if not cached or scope.
                 Location = null;
                 IsBrowserLocation = false;

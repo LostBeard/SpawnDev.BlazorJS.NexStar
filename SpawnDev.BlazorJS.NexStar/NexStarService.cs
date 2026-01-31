@@ -1,5 +1,4 @@
 ﻿using SpawnDev.BlazorJS.JSObjects;
-using System.Text;
 
 namespace SpawnDev.BlazorJS.NexStar
 {

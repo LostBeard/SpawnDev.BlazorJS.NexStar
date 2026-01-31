@@ -133,9 +133,6 @@ public class ProlificSerialWebUSB : ProlificSerial
                     "PL2303 bulk IN/OUT endpoints not found. Check interface/alternate or OS driver.");
             }
 
-            JS.Log("_inEndpoint (3)", _inEndpoint.EndpointNumber);
-            JS.Log("_outEndpoint (2)", _outEndpoint.EndpointNumber);
-
             // --- 6. START READ LOOP ---
             ComsEnabled = true;
             _cancelComsTokenSource = new CancellationTokenSource();
@@ -256,14 +253,6 @@ public class ProlificSerialWebUSB : ProlificSerial
         }
 
         using var dataView = currentCodingResult.Data;
-        //var buffer = dataView.ReadBytes(); // Should be 7 bytes
-
-        //if (buffer.Length < 7)
-        //{
-        //    // Fallback if read failed to return full buffer
-        //    buffer = new byte[7];
-        //}
-
         using var baudRateConfiguration = new DataView(dataView.Buffer);
 
         // 2. Modify buffer
@@ -292,37 +281,10 @@ public class ProlificSerialWebUSB : ProlificSerial
             Index = 0
         };
         var outResult = await _device.ControlTransferOut(setSetup, jsBuffer);
-        JS.Log("ProlificSerialWebUSB SetSerialOptions ControlTransferOut status", outResult?.Status ?? "null");
-
-        //// 2. Modify buffer
-        //var baudRate = serialOptions.BaudRate;
-        //buffer[0] = (byte)(baudRate & 0xFF);
-        //buffer[1] = (byte)((baudRate >> 8) & 0xFF);
-        //buffer[2] = (byte)((baudRate >> 16) & 0xFF);
-        //buffer[3] = (byte)((baudRate >> 24) & 0xFF);
-        //buffer[4] = serialOptions.StopBits switch { 1 => 0, 2 => 2, _ => 0 };
-        //buffer[5] = serialOptions.Parity?.String?.ToLower() switch
-        //{
-        //    "none" => 0,
-        //    "odd" => 1,
-        //    "even" => 2,
-        //    "mark" => 3,
-        //    "space" => 4,
-        //    _ => 0
-        //};
-        //buffer[6] = (byte)(serialOptions.DataBits ?? 8);
-
-        //// 3. Write back (SET_LINE_CODING = 0x20)
-        //using var jsBuffer = new Uint8Array(buffer);
-        //var setSetup = new USBControlTransferParameters
-        //{
-        //    RequestType = "class",
-        //    Recipient = "interface",
-        //    Request = SET_LINE_CODING,
-        //    Value = 0,
-        //    Index = 0
-        //};
-        //await _device.ControlTransferOut(setSetup, jsBuffer);
+        if (outResult?.Status != "ok")
+        {
+            JS.Log("ProlificSerialWebUSB SetSerialOptions ControlTransferOut status", outResult?.Status ?? "null");
+        }
     }
 
     /// <summary>
@@ -393,22 +355,18 @@ public class ProlificSerialWebUSB : ProlificSerial
     {
         if (!ComsEnabled || _inEndpoint == null || _device == null)
         {
-            JS.Log("!! TransferIn() - !ComsEnabled || _inEndpoint == null || _device == null", !ComsEnabled, _inEndpoint == null, _device == null);
+            // JS.Log("!! TransferIn() - !ComsEnabled || _inEndpoint == null || _device == null", !ComsEnabled, _inEndpoint == null, _device == null);
             return null;
         }
         if (!_device.Opened)
         {
-            JS.Log("!! TransferIn() - !_device.Opened", _inEndpoint.EndpointNumber);
+            // JS.Log("!! TransferIn() - !_device.Opened", _inEndpoint.EndpointNumber);
             return null;
         }
 
         try
         {
-            JS.Log("TransferIn()", _inEndpoint.EndpointNumber);
-
             var result = await _device.TransferIn(_inEndpoint.EndpointNumber, maxLen);
-
-            JS.Log("TransferIn result", _inEndpoint.EndpointNumber, result);
 
             if (result == null) return null;
 
