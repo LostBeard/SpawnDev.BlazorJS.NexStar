@@ -101,7 +101,7 @@ await builder.Build().BlazorJSRunAsync();
 - A browser with **Web Serial API** support (Chrome, Edge, Opera).
 - A browser with **Web USB API** support (Chrome on Android).
 - A Celestron NexStar telescope (or compatible mount).
-- A valid customized USB-Serial cable or connection.
+- A USB cable connected to the telescope's hand controller port.
 
 ### Tested Platforms
 - **Windows (Chrome)**: Verified working with Web Serial API.

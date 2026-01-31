@@ -66,43 +66,40 @@ public class ProlificSerialWebUSB : ProlificSerial
             ComsEnabled = true;
             serialOptions ??= DefaultSerialOptions;
 
-            await StepAsync("Open", () => _device.Open());
-            await StepAsync("SelectConfiguration(1)", () => _device.SelectConfiguration(1));
+            await _device.Open();
+            await _device.SelectConfiguration(1);
 
-            var interfaceNumber = _device.Configuration!.Interfaces[0].InterfaceNumber;
-            JS.Log(nameof(interfaceNumber), interfaceNumber);
-
-            await StepAsync("ClaimInterface(0)", () => _device.ClaimInterface(
+            await _device.ClaimInterface(
                 _device.Configuration!.Interfaces[0].InterfaceNumber
-            ));
+            );
 
             // --- 1. PROLIFIC INITIALIZATION SEQUENCE (From folleon/pl2303-webusb) ---
-            await StepAsync("VendorRead(0x8484,0)", () => VendorRead(0x8484, 0));
-            await StepAsync("VendorWrite(0x0404,0)", () => VendorWrite(0x0404, 0));
-            await StepAsync("VendorRead(0x8484,0)", () => VendorRead(0x8484, 0));
-            await StepAsync("VendorRead(0x8383,0)", () => VendorRead(0x8383, 0));
-            await StepAsync("VendorRead(0x8484,0)", () => VendorRead(0x8484, 0));
-            await StepAsync("VendorWrite(0x0404,1)", () => VendorWrite(0x0404, 1));
-            await StepAsync("VendorRead(0x8484,0)", () => VendorRead(0x8484, 0));
-            await StepAsync("VendorRead(0x8383,0)", () => VendorRead(0x8383, 0));
-            await StepAsync("VendorWrite(0,1)", () => VendorWrite(0, 1));
-            await StepAsync("VendorWrite(1,0)", () => VendorWrite(1, 0));
-            await StepAsync("VendorWrite(2,0x44)", () => VendorWrite(2, 0x44));
+            await VendorRead(0x8484, 0);
+            await VendorWrite(0x0404, 0);
+            await VendorRead(0x8484, 0);
+            await VendorRead(0x8383, 0);
+            await VendorRead(0x8484, 0);
+            await VendorWrite(0x0404, 1);
+            await VendorRead(0x8484, 0);
+            await VendorRead(0x8383, 0);
+            await VendorWrite(0, 1);
+            await VendorWrite(1, 0);
+            await VendorWrite(2, 0x44);
 
             // --- 2. CONFIGURE SERIAL PORT ---
             // Set Baud Rate etc via Get-Modify-Set
-            await StepAsync("SetSerialOptions", () => SetSerialOptionsAsync(serialOptions));
+            await SetSerialOptionsAsync(serialOptions);
 
             // --- 3. POST-CONFIG RESETS (From folleon/pl2303-webusb) ---
             // No flow control
-            await StepAsync("VendorWrite(0,0)", () => VendorWrite(0, 0));
+            await VendorWrite(0, 0);
             // Reset upstream data pipes
-            await StepAsync("VendorWrite(8,0)", () => VendorWrite(8, 0));
-            await StepAsync("VendorWrite(9,0)", () => VendorWrite(9, 0));
+            await VendorWrite(8, 0);
+            await VendorWrite(9, 0);
 
             // --- 4. ASSERT CONTROL LINES ---
             // Often required for the attached device (hand controller) to wake up.
-            await StepAsync("SetControlSignal(DTR=true, RTS=true)", () => SetControlSignal(true, true));
+            await SetControlSignal(true, true);
 
             // --- 5. ENDPOINT DISCOVERY ---
             USBInterface? iface = _device.Configuration?.Interfaces?.FirstOrDefault();
@@ -158,19 +155,6 @@ public class ProlificSerialWebUSB : ProlificSerial
             JS.Log("ProlificSerialWebUSB Open failed", $"{ex.Message}\n{ex.StackTrace ?? ""}");
             await CloseAsync();
             return false;
-        }
-    }
-
-    private static async Task StepAsync(string stepName, Func<Task> step)
-    {
-        try
-        {
-            await step();
-        }
-        catch (Exception ex)
-        {
-            JS.Log($"ProlificSerialWebUSB step failed: {stepName}", ex.Message);
-            throw;
         }
     }
 
