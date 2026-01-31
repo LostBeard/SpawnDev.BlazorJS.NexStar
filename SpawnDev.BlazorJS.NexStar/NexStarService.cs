@@ -151,6 +151,10 @@ namespace SpawnDev.BlazorJS.NexStar
         /// <returns>True if a valid NexStar port was selected</returns>
         public async Task<bool> SelectPortAsync(bool useWebUSB = false)
         {
+            if (SerialPort?.Connected == true)
+            {
+                return true;
+            }
             ProlificSerial? serialPort = null;
             try
             {

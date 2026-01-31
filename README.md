@@ -38,6 +38,7 @@ The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progres
 
 ### Core Capabilities
 - **Web Serial Connectivity**: Direct serial port selection and connection via browser.
+- **Web USB Connectivity**: Fallback connection method for Android devices using Web USB API.
 - **Command Protocol**: Implementation of the Celestron NexStar communication protocol.
 - **Position Tracking**: 
   - Real-time RA/Dec and Az/Alt monitoring.
