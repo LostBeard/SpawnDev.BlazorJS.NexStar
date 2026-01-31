@@ -14,7 +14,8 @@ Built on top of [SpawnDev.BlazorJS](https://github.com/LostBeard/SpawnDev.Blazor
 The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progressive Web App (PWA) demonstrating the library's capabilities.
 
 ### App Features:
-- **Night Vision Mode**: Optimized dark red/black UI for preserving night vision.
+- **Dark Mode**: 
+  - Optimized dark red/black UI for viewing in low light environments.
 - **Telescope Control**: 
   - Complete directional slewing with variable rates.
   - GoTo coordinates (RA/Dec).
