@@ -10,11 +10,6 @@ namespace SpawnDev.BlazorJS.NexStar
     public class NexStarService : IAsyncBackgroundService
     {
         #region Private Fields
-
-        //private CancellationTokenSource? CancelComsTokenSource = null;
-        //private WritableStreamDefaultWriter? Writer = null;
-        //private Task? ReadingTask = null;
-        private Navigator navigator;
         private BlazorJSRuntime JS;
         private Task? _Ready = null;
 
@@ -131,12 +126,6 @@ namespace SpawnDev.BlazorJS.NexStar
         public NexStarService(BlazorJSRuntime js)
         {
             JS = js;
-            if (!JS.IsBrowser)
-            {
-                navigator = null!;
-                return;
-            }
-            navigator = JS.Get<Navigator?>("navigator")!;
         }
 
         #endregion
@@ -149,48 +138,7 @@ namespace SpawnDev.BlazorJS.NexStar
         private async Task InitAsync()
         {
             if (!JS.IsBrowser) return;
-
-            //try
-            //{
-            //    var userAgent = JS.Get<string>("navigator.userAgent");
-            //    var isAndroid = userAgent.Contains("Android", StringComparison.OrdinalIgnoreCase);
-
-            //    // Check if USB API is available (required for polyfill)
-            //    using var usb = JS.Get<USB>("navigator.usb");
-            //    var hasUsb = usb != null;
-
-            //    // Android Chrome usually has navigator.serial but lacks drivers for USB serial.
-            //    // so we force the polyfill if on Android and USB is available.
-            //    if (isAndroid && hasUsb)
-            //    {
-            //        // Load the polyfill module using the library content path
-            //        using var polyfillModule = await JS.Import("SerialPolly", "./_content/SpawnDev.BlazorJS.NexStar/serial.js");
-
-            //        // Get the exported 'serial' object
-            //        var polyfillSerial = polyfillModule.GetExport<Serial>("serial");
-
-            //        if (polyfillSerial != null)
-            //        {
-            //            // Replace the native Serial instance (or null) with the polyfill
-            //            if (Serial != null)
-            //            {
-            //                Serial.OnConnect -= Serial_OnConnect;
-            //                Serial.Dispose();
-            //            }
-            //            UsingPolyfill = true;
-            //            Serial = polyfillSerial;
-            //            // the polyfill Serial interface does not support events and does not inherit from EventTarget like the real Serial interface
-            //            //Serial.OnConnect += Serial_OnConnect;
-            //            Console.WriteLine("Web Serial Polyfill loaded for Android.");
-            //        }
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine($"Web Serial Polyfill init failed: {ex.Message}");
-            //}
-
-            //await UpdateAsync();
+            // Nothing at this time - reserved for future use
         }
 
         #endregion
