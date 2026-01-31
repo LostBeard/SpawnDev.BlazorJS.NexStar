@@ -28,6 +28,8 @@ The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progres
   - Visual tracking of alignment status.
 - **Location Services**: 
   - Sync telescope time and location with browser data.
+- **Fallback USB Support**: 
+  - For Android devices, uses Web USB API to connect via Prolific PL2303 driver.
 
 ---
 
