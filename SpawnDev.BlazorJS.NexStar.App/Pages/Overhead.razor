@@ -93,6 +93,21 @@
                         </g>
                     }
                 </g>
+                
+                <!-- Telescope Position Indicator -->
+                @if (NexStar.SerialPortSelected && TelescopeAz.HasValue && TelescopeAlt.HasValue && TelescopeAlt.Value >= 0)
+                {
+                    var (tx, ty) = AltAzToXY(TelescopeAz.Value, TelescopeAlt.Value);
+                    <g class="telescope-indicator">
+                        <!-- Crosshairs -->
+                        <line x1="@(tx - 8)" y1="@ty" x2="@(tx + 8)" y2="@ty" class="telescope-crosshair" />
+                        <line x1="@tx" y1="@(ty - 8)" x2="@tx" y2="@(ty + 8)" class="telescope-crosshair" />
+                        <!-- Outer circle -->
+                        <circle cx="@tx" cy="@ty" r="6" class="telescope-circle" />
+                        <!-- Center dot -->
+                        <circle cx="@tx" cy="@ty" r="1.5" class="telescope-center" />
+                    </g>
+                }
             </svg>
             
             <!-- Tooltip -->
@@ -162,6 +177,10 @@
     private System.Threading.Timer? RefreshTimer;
     private ElementReference svgElement;
     
+    // Telescope position
+    private double? TelescopeAz;
+    private double? TelescopeAlt;
+    
     // Mouse tracking for tooltip
     private string TooltipStyle => HoveredObject != null ? "display: block;" : "display: none;";
 
@@ -180,6 +199,28 @@
         if (LocationService.Location != null)
         {
             VisibleObjects = await OverheadService.GetVisibleObjectsAsync(Filters);
+            
+            // Get telescope position if connected
+            if (NexStar.SerialPortSelected)
+            {
+                try
+                {
+                    var pos = await NexStar.GetAzAltAsync();
+                    TelescopeAz = pos.Azimuth;
+                    TelescopeAlt = pos.Altitude;
+                }
+                catch
+                {
+                    TelescopeAz = null;
+                    TelescopeAlt = null;
+                }
+            }
+            else
+            {
+                TelescopeAz = null;
+                TelescopeAlt = null;
+            }
+            
             StateHasChanged();
         }
     }
@@ -366,6 +407,28 @@
     .alt-label {
         font-size: 5px;
         fill: #555;
+    }
+
+    /* Telescope position indicator */
+    .telescope-crosshair {
+        stroke: #ff4444;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+    }
+
+    .telescope-circle {
+        fill: none;
+        stroke: #ff4444;
+        stroke-width: 1.5;
+    }
+
+    .telescope-center {
+        fill: #ff4444;
+    }
+
+    .telescope-indicator {
+        pointer-events: none;
+        filter: drop-shadow(0 0 3px rgba(255, 68, 68, 0.8));
     }
 
     .object-marker {
