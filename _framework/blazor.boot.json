@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "SpawnDev.BlazorJS.NexStar.App",
   "resources": {
-    "hash": "sha256-d5nS61Vt6fBkN0O/uNMnh6KUPBXeMCuqqBCV7Az4GEQ=",
+    "hash": "sha256-MOFy04EJqSddJZTtDGqNTKHObJKvRx032mDFlcuYf74=",
     "jsModuleNative": {
       "dotnet.native.js": "sha256-clxzGaAFwcQ6QWhwQ7dzpD9ktR/87yTache3B45gqoQ="
     },
@@ -58,13 +58,13 @@
       "System.Runtime.wasm": "sha256-3XY6D+Ept5mZ+LKJRkvuY+bg98PPMY4+m8ylNwNZUfM=",
       "System.Security.Cryptography.wasm": "sha256-bsPInurGqV6CgMdGYLigwEQCWPG0SW5SBnJWbKmW7U0=",
       "System.Text.Encodings.Web.wasm": "sha256-YZTyVkf+6++HcEP8mHZ6czMP3Ul886NWB5TYbCMFawE=",
-      "System.Text.Json.wasm": "sha256-mFAGgSsGi68IEip3Sh7fM9Ee9th8BPfGEpvlPeXyT4U=",
+      "System.Text.Json.wasm": "sha256-fDP2PEfbwKj01voogtUhH5c2V4pEeQC0nLdeyM/7at4=",
       "System.Text.RegularExpressions.wasm": "sha256-eJ85MEhKnp+Ysj3qfb5LS8qAWcxeVcpw812Kk9itNKk=",
       "System.Threading.wasm": "sha256-fnxAwkq+QGHNToumYTWMOEtAezBF3JnbVWsAlb2QJxc=",
       "System.wasm": "sha256-jXhnUNHzjjL7Plo7WcHuX7V5Dc/Umt+qmGGC+Js76SE=",
       "System.Private.CoreLib.wasm": "sha256-1hlmiWJYHB9Qzf3uNj5T+mnWnuWb9Pycj+Y2D3cZWzE=",
-      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-AQOx/DnWHr1jucaOJ1qSyauKsZLmRapKw5CoeOZPCF8=",
-      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-vdmxPJF1cG+sCjMwm8iGg16j5NCL4fcTkFE7iura8EU="
+      "SpawnDev.BlazorJS.NexStar.wasm": "sha256-V6/ObGvcsPWvqjxBTuBAU1TopR/wEuwI3Ydxlu5Kgmo=",
+      "SpawnDev.BlazorJS.NexStar.App.wasm": "sha256-BTP0fz8crz9Zv9HpDPevDcqDkdJDU8ICMW3gmlsgK7A="
     },
     "libraryInitializers": {
       "SpawnDev.BlazorJS.lib.module.js": "sha256-9suC9LCVB+Qavj4prBgl/ufjjFZIUypz8Imx/0r5LsI="
