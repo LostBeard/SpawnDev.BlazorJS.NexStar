@@ -8,7 +8,7 @@ Built on top of [SpawnDev.BlazorJS](https://github.com/LostBeard/SpawnDev.Blazor
 
 ---
 
-## 🔭 Live Demo App
+## 🔭 SpawnDev NexStar App
 **[Launch NexStar Control](https://lostbeard.github.io/SpawnDev.BlazorJS.NexStar/)**
 
 The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progressive Web App (PWA) demonstrating the library's capabilities.
