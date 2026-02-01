@@ -13,6 +13,7 @@ builder.Services.AddSingleton<PhoneSensorService>();
 builder.Services.AddSingleton<LocationService>();
 builder.Services.AddScoped<SatelliteService>();
 builder.Services.AddScoped<PlaneService>();
+builder.Services.AddScoped<OverheadService>();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 if (JS.IsWindow)
