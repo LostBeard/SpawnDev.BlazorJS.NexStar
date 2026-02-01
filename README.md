@@ -80,43 +80,114 @@ dotnet add package SpawnDev.BlazorJS.NexStar
 ### Usage Example (Program.cs)
 
 ```cs
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.NexStar;
-using SpawnDev.BlazorJS.NexStar.App;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// 1. Add BlazorJSRuntime (Required for Web Serial)
+// Add BlazorJSRuntime (Required for Web Serial/USB)
 builder.Services.AddBlazorJSRuntime();
 
-// 2. Add NexStarService
+// Add NexStarService
 builder.Services.AddSingleton<NexStarService>();
 
-// 3. Initialize and Run
 await builder.Build().BlazorJSRunAsync();
 ```
 
-### Injecting the Service
+### Common Usage Examples
 
 ```razor
 @inject NexStarService NexStar
 
-<button @onclick="Connect">Connect Telescope</button>
+<button @onclick="Connect" disabled="@NexStar.SerialPortSelected">Connect</button>
+<button @onclick="Disconnect" disabled="@(!NexStar.SerialPortSelected)">Disconnect</button>
+
+@if (NexStar.SerialPortSelected)
+{
+    <p>Model: @NexStar.Model | Aligned: @NexStar.IsAligned</p>
+    <p>RA: @NexStar.CurrentRa?.ToString("F4")h | Dec: @NexStar.CurrentDec?.ToString("F2")°</p>
+    <p>Az: @NexStar.CurrentAz?.ToString("F2")° | Alt: @NexStar.CurrentAlt?.ToString("F2")°</p>
+    
+    <button @onclick="GoToM31">GoTo M31 (Andromeda)</button>
+    <button @onclick="StopSlew">Stop</button>
+}
 
 @code {
+    // Connect to telescope (opens device picker)
     private async Task Connect()
     {
         if (await NexStar.SelectPortAsync())
         {
-            
+            Console.WriteLine($"Connected to {NexStar.Model}");
         }
+    }
+
+    // Disconnect from telescope
+    private async Task Disconnect() => await NexStar.DeselectPortAsync();
+
+    // GoTo a specific RA/Dec coordinate (M31 Andromeda Galaxy)
+    private async Task GoToM31()
+    {
+        double ra = 0.712;   // RA in hours (0h 42m 44s)
+        double dec = 41.27;  // Dec in degrees (+41° 16')
+        await NexStar.GotoRaDecAsync(ra, dec);
+    }
+
+    // GoTo using Az/Alt (useful for terrestrial or satellite tracking)
+    private async Task GoToAzAlt(double az, double alt)
+    {
+        await NexStar.GotoAzAltAsync(az, alt);
+    }
+
+    // Slew manually (for directional buttons)
+    private async Task SlewNorth() => await NexStar.SlewFixedAsync(SlewAxis.Dec, SlewDirection.Positive, 5);
+    private async Task SlewSouth() => await NexStar.SlewFixedAsync(SlewAxis.Dec, SlewDirection.Negative, 5);
+    private async Task SlewEast()  => await NexStar.SlewFixedAsync(SlewAxis.Ra, SlewDirection.Positive, 5);
+    private async Task SlewWest()  => await NexStar.SlewFixedAsync(SlewAxis.Ra, SlewDirection.Negative, 5);
+
+    // Stop all slewing
+    private async Task StopSlew() => await NexStar.StopAllSlewAsync();
+
+    // Set tracking mode
+    private async Task SetTracking(TrackingMode mode) => await NexStar.SetTrackingModeAsync(mode);
+
+    // Sync current position (after centering on a known star)
+    private async Task SyncPosition(double ra, double dec) => await NexStar.SyncRaDecAsync(ra, dec);
+
+    // Set telescope time/location from browser
+    private async Task SyncTimeLocation()
+    {
+        await NexStar.SetTimeAsync(DateTime.UtcNow);
+        // Location can be set via NexStar.SetLocationAsync(lat, lon)
     }
 }
 ```
+
+### Key Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `SerialPortSelected` | `bool` | True if connected to telescope |
+| `IsAligned` | `bool` | True if telescope is aligned |
+| `Model` | `string?` | Telescope model name |
+| `CurrentRa` / `CurrentDec` | `double?` | Current RA/Dec position |
+| `CurrentAz` / `CurrentAlt` | `double?` | Current Az/Alt position |
+| `TrackingMode` | `TrackingMode` | Current tracking mode |
+
+### Key Methods
+
+| Method | Description |
+|--------|-------------|
+| `SelectPortAsync()` | Opens device picker, connects to telescope |
+| `DeselectPortAsync()` | Disconnects from telescope |
+| `GotoRaDecAsync(ra, dec)` | Slew to RA/Dec coordinates |
+| `GotoAzAltAsync(az, alt)` | Slew to Az/Alt coordinates |
+| `SlewFixedAsync(axis, dir, rate)` | Manual slew at fixed rate (1-9) |
+| `StopAllSlewAsync()` | Stop all motion |
+| `SyncRaDecAsync(ra, dec)` | Sync position after centering |
+| `SetTrackingModeAsync(mode)` | Set tracking (Off, AltAz, EqNorth, EqSouth) |
 
 ### Requirements
 - A browser with **Web Serial API** support (Chrome, Edge, Opera).
