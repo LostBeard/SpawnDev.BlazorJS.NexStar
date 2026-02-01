@@ -22,6 +22,14 @@ The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progres
   - Catalog of 110 Messier objects and bright alignment stars.
   - "Quick Access" panel showing objects currently visible from your location.
   - Filter by constellation, magnitude, and type.
+- **Satellite Tracker** 🛰️:
+  - Real-time tracking of orbital objects (ISS, Starlink, weather satellites, etc.).
+  - Fetches TLE data from CelesTrak with offline caching.
+  - Automatic telescope slewing to track selected satellite.
+- **Plane Tracker** ✈️:
+  - Real-time tracking of nearby aircraft using ADS-B data.
+  - Displays callsign, altitude, speed, and distance.
+  - Calculate look angles and track aircraft with telescope.
 - **Alignment Helper**: 
   - Real-time suggestions for best alignment stars based on time and location.
   - Visual tracking of alignment status.
@@ -31,6 +39,19 @@ The repository includes `SpawnDev.BlazorJS.NexStar.App`, a full-featured Progres
   - For Android devices, uses Web USB API to connect via Prolific PL2303 driver.
 - **Dark Mode**: 
   - Optimized dark red/black UI for viewing in low light environments.
+
+### Data Sources & Credits
+
+| Feature | Source | License |
+|---------|--------|---------|
+| **Satellite TLE Data** | [CelesTrak](https://celestrak.org/) | Free for non-commercial use |
+| **Aircraft Data** | [OpenSky Network](https://opensky-network.org/) | Free API (non-commercial) |
+
+### Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| [SGP.NET](https://www.nuget.org/packages/SGPdotNET/) | SGP4 orbital propagation for satellite tracking |
 
 ---
 
