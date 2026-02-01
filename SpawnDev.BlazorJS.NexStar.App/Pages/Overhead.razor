@@ -52,7 +52,7 @@
         }
         else
         {
-            <svg viewBox="-110 -110 220 220" class="sky-map" @ref="svgElement">
+            <svg viewBox="-110 -110 220 220" class="sky-map" style="max-width: calc(100vw - 240px); max-height: calc(100vh - 120px); width: auto; height: auto; aspect-ratio: 1 / 1;" @ref="svgElement">
                 <!-- Background -->
                 <circle cx="0" cy="0" r="100" class="horizon-circle" />
                 
@@ -267,13 +267,15 @@
     .overhead-container {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        height: 100%;
+        min-height: 0;
         background: #0a0a0f;
         color: #e0e0e0;
         overflow: hidden;
     }
 
     .filter-panel {
+        flex-shrink: 0;
         background: #1a1a25;
         border-bottom: 1px solid #333;
     }
@@ -281,28 +283,29 @@
     .filter-header {
         display: flex;
         justify-content: space-between;
-        padding: 10px 15px;
+        padding: 6px 10px;
         cursor: pointer;
         font-weight: bold;
+        font-size: 0.85rem;
     }
 
     .filter-options {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        padding: 10px 15px;
+        gap: 6px;
+        padding: 6px 10px;
         background: #15151f;
     }
 
     .filter-checkbox {
         display: flex;
         align-items: center;
-        gap: 5px;
-        padding: 5px 10px;
+        gap: 4px;
+        padding: 3px 8px;
         background: #222;
-        border-radius: 15px;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
     }
 
     .filter-checkbox input {
@@ -311,19 +314,22 @@
 
     .sky-map-container {
         flex: 1;
+        min-height: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
         overflow: hidden;
         touch-action: none;
+        padding: 8px;
     }
 
     .sky-map {
-        width: 100%;
-        max-width: 600px;
-        max-height: 80vh;
-        aspect-ratio: 1;
+        width: auto;
+        height: auto;
+        max-width: calc(100vw - 240px);
+        max-height: calc(100vh - 150px);
+        aspect-ratio: 1 / 1;
     }
 
     .horizon-circle {
