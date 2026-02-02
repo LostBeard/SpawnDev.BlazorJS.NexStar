@@ -28,13 +28,35 @@ public class SkyObject
 }
 
 /// <summary>
-/// Aggregates sky objects from all sources for the overhead view
+/// Aggregates sky objects from all sources for the overhead view.
+/// Each source updates independently to avoid slow sources blocking fast ones.
 /// </summary>
 public class OverheadService
 {
     private readonly SatelliteService SatelliteService;
     private readonly PlaneService PlaneService;
     private readonly LocationService LocationService;
+
+    // Cached data per source - updated independently
+    private List<SkyObject> _satellites = new();
+    private List<SkyObject> _planes = new();
+    private List<SkyObject> _planets = new();
+    private List<SkyObject> _moon = new();
+    private List<SkyObject> _stars = new();
+    private List<SkyObject> _dsos = new();
+
+    // Last update times per source
+    private DateTime _lastSatelliteUpdate = DateTime.MinValue;
+    private DateTime _lastPlaneUpdate = DateTime.MinValue;
+    private DateTime _lastCelestialUpdate = DateTime.MinValue;
+
+    // Update intervals (satellites and celestial can update faster, planes have API rate limits)
+    private readonly TimeSpan SatelliteUpdateInterval = TimeSpan.FromSeconds(5);
+    private readonly TimeSpan PlaneUpdateInterval = TimeSpan.FromSeconds(30);
+    private readonly TimeSpan CelestialUpdateInterval = TimeSpan.FromSeconds(10);
+
+    // Event to notify when any source updates
+    public event Action? OnDataUpdated;
 
     public OverheadService(SatelliteService satelliteService, PlaneService planeService, LocationService locationService)
     {
@@ -51,6 +73,7 @@ public class OverheadService
         public bool ShowSatellites { get; set; } = true;
         public bool ShowPlanes { get; set; } = true;
         public bool ShowPlanets { get; set; } = true;
+        public bool ShowMoon { get; set; } = true;
         public bool ShowStars { get; set; } = true;
         public bool ShowDSOs { get; set; } = true;
         
@@ -59,28 +82,56 @@ public class OverheadService
     }
 
     /// <summary>
-    /// Get all visible sky objects based on current filters
+    /// Refresh all sources that are due for update (non-blocking, fire-and-forget)
     /// </summary>
-    public async Task<List<SkyObject>> GetVisibleObjectsAsync(FilterSettings filters)
+    public async Task RefreshSourcesAsync(FilterSettings filters)
     {
         var location = LocationService.Location;
-        if (location == null) return new List<SkyObject>();
+        if (location == null) return;
 
-        var objects = new List<SkyObject>();
         var now = DateTime.UtcNow;
+        var tasks = new List<Task>();
 
-        // Satellites
-        if (filters.ShowSatellites)
+        // Satellites - update if interval elapsed
+        if (filters.ShowSatellites && (now - _lastSatelliteUpdate) > SatelliteUpdateInterval)
         {
+            tasks.Add(RefreshSatellitesAsync(filters, location));
+        }
+
+        // Planes - update if interval elapsed
+        if (filters.ShowPlanes && (now - _lastPlaneUpdate) > PlaneUpdateInterval)
+        {
+            tasks.Add(RefreshPlanesAsync(location));
+        }
+
+        // Celestial objects (stars, DSOs, planets, moon) - update if interval elapsed
+        if ((filters.ShowStars || filters.ShowDSOs || filters.ShowPlanets || filters.ShowMoon) && 
+            (now - _lastCelestialUpdate) > CelestialUpdateInterval)
+        {
+            tasks.Add(RefreshCelestialAsync(filters, location));
+        }
+
+        // Wait for all concurrent updates
+        if (tasks.Count > 0)
+        {
+            await Task.WhenAll(tasks);
+        }
+    }
+
+    private async Task RefreshSatellitesAsync(FilterSettings filters, GeoLocation location)
+    {
+        try
+        {
+            var satellites = new List<SkyObject>();
             foreach (var category in filters.SatelliteCategories)
             {
                 var tles = await SatelliteService.GetTlesAsync(category);
                 foreach (var tle in tles)
                 {
                     var pos = SatelliteService.CalculatePosition(tle, location);
-                    if (pos != null && pos.TopocentricAltitude > 0) // Above horizon
+                    if (pos != null && pos.TopocentricAltitude > 0)
                     {
-                        objects.Add(new SkyObject
+                        satellites.Add(new SkyObject
                         {
                             Id = $"sat_{tle.Name}",
                             Name = tle.Name,
@@ -95,17 +146,24 @@ public class OverheadService
                     }
                 }
             }
+            _satellites = satellites;
+            _lastSatelliteUpdate = DateTime.UtcNow;
+            OnDataUpdated?.Invoke();
         }
+        catch { /* Ignore errors, keep old data */ }
+    }
 
-        // Planes
-        if (filters.ShowPlanes)
+    private async Task RefreshPlanesAsync(GeoLocation location)
+    {
+        try
         {
-            var planes = await PlaneService.GetNearbyAircraftAsync(location);
-            foreach (var plane in planes)
+            var planes = new List<SkyObject>();
+            var planeData = await PlaneService.GetNearbyAircraftAsync(location);
+            foreach (var plane in planeData)
             {
                 if (plane.Altitude.HasValue && plane.Altitude > 0 && plane.Azimuth.HasValue)
                 {
-                    objects.Add(new SkyObject
+                    planes.Add(new SkyObject
                     {
                         Id = $"plane_{plane.Icao24}",
                         Name = plane.Callsign ?? plane.Icao24,
@@ -119,27 +177,80 @@ public class OverheadService
                     });
                 }
             }
+            _planes = planes;
+            _lastPlaneUpdate = DateTime.UtcNow;
+            OnDataUpdated?.Invoke();
         }
+        catch { /* Ignore errors, keep old data */ }
+    }
 
-        // Planets
-        if (filters.ShowPlanets)
-        {
-            objects.AddRange(GetPlanets(location, now));
-        }
+    private Task RefreshCelestialAsync(FilterSettings filters, GeoLocation location)
+    {
+        var now = DateTime.UtcNow;
 
-        // Stars
         if (filters.ShowStars)
         {
-            objects.AddRange(GetVisibleStars(location, now));
+            _stars = GetVisibleStars(location, now);
         }
-
-        // DSOs (Messier)
+        
         if (filters.ShowDSOs)
         {
-            objects.AddRange(GetVisibleDSOs(location, now));
+            _dsos = GetVisibleDSOs(location, now);
+        }
+        
+        if (filters.ShowPlanets)
+        {
+            _planets = GetPlanets(location, now);
         }
 
+        if (filters.ShowMoon)
+        {
+            _moon = GetMoon(location, now);
+        }
+
+        _lastCelestialUpdate = DateTime.UtcNow;
+        OnDataUpdated?.Invoke();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Get all visible sky objects from cached data (instant, no async)
+    /// </summary>
+    public List<SkyObject> GetVisibleObjects(FilterSettings filters)
+    {
+        var objects = new List<SkyObject>();
+
+        if (filters.ShowSatellites)
+            objects.AddRange(_satellites);
+        
+        if (filters.ShowPlanes)
+            objects.AddRange(_planes);
+        
+        if (filters.ShowPlanets)
+            objects.AddRange(_planets);
+        
+        if (filters.ShowMoon)
+            objects.AddRange(_moon);
+        
+        if (filters.ShowStars)
+            objects.AddRange(_stars);
+        
+        if (filters.ShowDSOs)
+            objects.AddRange(_dsos);
+
         return objects;
+    }
+
+    /// <summary>
+    /// Get all visible sky objects (async - triggers refresh if needed, returns cached data)
+    /// </summary>
+    public async Task<List<SkyObject>> GetVisibleObjectsAsync(FilterSettings filters)
+    {
+        // Start refreshing sources that need it (non-blocking for slow sources)
+        _ = RefreshSourcesAsync(filters);
+        
+        // Return current cached data immediately
+        return GetVisibleObjects(filters);
     }
 
     private string GetSatelliteSubcategory(string category) => category switch
@@ -152,19 +263,64 @@ public class OverheadService
         _ => category
     };
 
-    /// <summary>
-    /// Calculate basic planetary positions (simplified)
-    /// </summary>
     private List<SkyObject> GetPlanets(GeoLocation location, DateTime utc)
     {
-        // Simplified planet positions - in reality you'd use VSOP87 or similar
-        // For now, just return empty - would need proper ephemeris calculations
-        return new List<SkyObject>();
+        var planets = new List<SkyObject>();
+
+        foreach (var planet in SolarSystemMath.Planets)
+        {
+            var altAz = SolarSystemMath.GetAzAlt(planet, location.Latitude, location.Longitude, utc);
+            if (altAz.Altitude > 0) // Above horizon
+            {
+                var raDec = SolarSystemMath.GetPosition(planet, utc);
+                planets.Add(new SkyObject
+                {
+                    Id = $"planet_{planet}",
+                    Name = SolarSystemMath.GetName(planet),
+                    Category = "Planet",
+                    Subcategory = "Planet",
+                    Azimuth = altAz.Azimuth,
+                    Altitude = altAz.Altitude,
+                    Ra = raDec.RightAscension,
+                    Dec = raDec.Declination,
+                    ExtraInfo = $"Az: {altAz.Azimuth:F1}°, Alt: {altAz.Altitude:F1}°",
+                    SourceObject = planet
+                });
+            }
+        }
+
+        return planets;
     }
 
-    /// <summary>
-    /// Get visible alignment/bright stars
-    /// </summary>
+    private List<SkyObject> GetMoon(GeoLocation location, DateTime utc)
+    {
+        var moon = new List<SkyObject>();
+        
+        var altAz = LunarMath.GetMoonAzAlt(location.Latitude, location.Longitude, utc);
+        if (altAz.Altitude > 0) // Above horizon
+        {
+            var raDec = LunarMath.GetMoonPosition(utc);
+            var phaseName = LunarMath.GetMoonPhaseName(utc);
+            var illumination = LunarMath.GetMoonIllumination(utc);
+            
+            moon.Add(new SkyObject
+            {
+                Id = "moon",
+                Name = "Moon",
+                Category = "Moon",
+                Subcategory = phaseName,
+                Azimuth = altAz.Azimuth,
+                Altitude = altAz.Altitude,
+                Ra = raDec.RightAscension,
+                Dec = raDec.Declination,
+                ExtraInfo = $"{phaseName}, {illumination:F0}% illuminated",
+                SourceObject = null
+            });
+        }
+
+        return moon;
+    }
+
     private List<SkyObject> GetVisibleStars(GeoLocation location, DateTime utc)
     {
         var stars = new List<SkyObject>();
@@ -173,7 +329,7 @@ public class OverheadService
         {
             var altAz = AstronomyMath.EquatorialToHorizontal(
                 star.RightAscension, star.Declination, location.Latitude, location.Longitude, utc);
-            if (altAz.Altitude > 5) // Above 5° horizon
+            if (altAz.Altitude > 5)
             {
                 stars.Add(new SkyObject
                 {
@@ -194,9 +350,6 @@ public class OverheadService
         return stars;
     }
 
-    /// <summary>
-    /// Get visible Messier objects
-    /// </summary>
     private List<SkyObject> GetVisibleDSOs(GeoLocation location, DateTime utc)
     {
         var dsos = new List<SkyObject>();
@@ -205,7 +358,7 @@ public class OverheadService
         {
             var altAz = AstronomyMath.EquatorialToHorizontal(
                 m.RightAscension, m.Declination, location.Latitude, location.Longitude, utc);
-            if (altAz.Altitude > 10) // Above 10° horizon
+            if (altAz.Altitude > 10)
             {
                 dsos.Add(new SkyObject
                 {

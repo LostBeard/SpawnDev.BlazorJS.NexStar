@@ -11,10 +11,10 @@ builder.Services.AddBlazorJSRuntime(out var JS);
 builder.Services.AddSingleton<NexStarService>();
 builder.Services.AddSingleton<PhoneSensorService>();
 builder.Services.AddSingleton<LocationService>();
-builder.Services.AddScoped<SatelliteService>();
-builder.Services.AddScoped<PlaneService>();
-builder.Services.AddScoped<OverheadService>();
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+builder.Services.AddSingleton<SatelliteService>();
+builder.Services.AddSingleton<PlaneService>();
+builder.Services.AddSingleton<OverheadService>();
+builder.Services.AddSingleton(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 if (JS.IsWindow)
 {

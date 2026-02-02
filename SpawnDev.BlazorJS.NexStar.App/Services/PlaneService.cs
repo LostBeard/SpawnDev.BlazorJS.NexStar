@@ -1,14 +1,18 @@
 using SpawnDev.BlazorJS;
 using SpawnDev.BlazorJS.JSObjects;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace SpawnDev.BlazorJS.NexStar.App.Services;
 
+/// <summary>
+/// Service for fetching nearby aircraft data from OpenSky Network.
+/// Anonymous access: 400 requests/day with caching fallback.
+/// </summary>
 public class PlaneService
 {
     private readonly HttpClient Http;
     private readonly BlazorJSRuntime JS;
+    
     private Storage? LocalStorage
     {
         get
@@ -27,7 +31,7 @@ public class PlaneService
     private const string CacheKey = "planes_cache";
 
     /// <summary>
-    /// Represents an aircraft state from OpenSky Network API.
+    /// Represents an aircraft state.
     /// </summary>
     public class Aircraft
     {
@@ -57,62 +61,53 @@ public class PlaneService
 
     /// <summary>
     /// Fetches nearby aircraft from OpenSky Network API.
-    /// Falls back to cache if offline.
+    /// Falls back to cache if offline or rate limited.
     /// </summary>
     public async Task<List<Aircraft>> GetNearbyAircraftAsync(GeoLocation location, double radiusDegrees = 1.5)
     {
         if (location == null) return new List<Aircraft>();
 
-        var lamin = location.Latitude - radiusDegrees;
-        var lamax = location.Latitude + radiusDegrees;
-        var lomin = location.Longitude - radiusDegrees;
-        var lomax = location.Longitude + radiusDegrees;
-
         List<Aircraft>? aircraft = null;
 
         try
         {
-            // OpenSky Network API - no key required for basic use
-            var url = $"https://opensky-network.org/api/states/all?lamin={lamin}&lamax={lamax}&lomin={lomin}&lomax={lomax}";
-            var response = await Http.GetStringAsync(url);
-            aircraft = ParseOpenSkyResponse(response);
+            var lamin = location.Latitude - radiusDegrees;
+            var lamax = location.Latitude + radiusDegrees;
+            var lomin = location.Longitude - radiusDegrees;
+            var lomax = location.Longitude + radiusDegrees;
 
-            // Cache if successful
-            if (aircraft != null && aircraft.Count > 0)
+            // OpenSky Network API (anonymous, 400 req/day)
+            var url = $"https://opensky-network.org/api/states/all?lamin={lamin}&lamax={lamax}&lomin={lomin}&lomax={lomax}";
+            var response = await Http.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
             {
-                var cacheEntry = new CachedPlaneData
+                var json = await response.Content.ReadAsStringAsync();
+                aircraft = ParseOpenSkyResponse(json);
+
+                // Cache if successful
+                if (aircraft != null && aircraft.Count > 0)
                 {
-                    LastUpdated = DateTime.UtcNow,
-                    Aircraft = aircraft
-                };
-                LocalStorage?.SetItem(CacheKey, JsonSerializer.Serialize(cacheEntry));
+                    CacheData(aircraft);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"OpenSky: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"PlaneService fetch error: {ex.Message}");
-            // Fall back to cache
+            Console.WriteLine($"PlaneService error: {ex.Message}");
         }
 
-        // If no data, try cache
+        // Fall back to cache if API fails
         if (aircraft == null || aircraft.Count == 0)
         {
-            var cachedJson = LocalStorage?.GetItem(CacheKey);
-            if (!string.IsNullOrEmpty(cachedJson))
-            {
-                try
-                {
-                    var cacheEntry = JsonSerializer.Deserialize<CachedPlaneData>(cachedJson);
-                    if (cacheEntry != null)
-                    {
-                        aircraft = cacheEntry.Aircraft;
-                    }
-                }
-                catch { /* corrupted cache */ }
-            }
+            aircraft = LoadFromCache();
         }
 
-        // Calculate look angles for each aircraft
+        // Calculate look angles
         if (aircraft != null)
         {
             foreach (var plane in aircraft)
@@ -125,9 +120,7 @@ public class PlaneService
     }
 
     /// <summary>
-    /// Parses the OpenSky Network API response.
-    /// The API returns a JSON object with a "states" array.
-    /// Each state is an array of values in a specific order.
+    /// Parse OpenSky Network API response
     /// </summary>
     private List<Aircraft> ParseOpenSkyResponse(string json)
     {
@@ -160,7 +153,6 @@ public class PlaneService
                         GeoAltitude = arr.Length > 13 && arr[13].ValueKind == JsonValueKind.Number ? arr[13].GetDouble() : null
                     };
 
-                    // Only include airborne aircraft with valid positions
                     if (!aircraft.OnGround && aircraft.Latitude.HasValue && aircraft.Longitude.HasValue)
                     {
                         result.Add(aircraft);
@@ -175,9 +167,37 @@ public class PlaneService
         return result;
     }
 
+    private void CacheData(List<Aircraft> aircraft)
+    {
+        try
+        {
+            var cacheEntry = new CachedPlaneData
+            {
+                LastUpdated = DateTime.UtcNow,
+                Aircraft = aircraft
+            };
+            LocalStorage?.SetItem(CacheKey, JsonSerializer.Serialize(cacheEntry));
+        }
+        catch { }
+    }
+
+    private List<Aircraft>? LoadFromCache()
+    {
+        try
+        {
+            var cachedJson = LocalStorage?.GetItem(CacheKey);
+            if (!string.IsNullOrEmpty(cachedJson))
+            {
+                var cacheEntry = JsonSerializer.Deserialize<CachedPlaneData>(cachedJson);
+                return cacheEntry?.Aircraft;
+            }
+        }
+        catch { }
+        return null;
+    }
+
     /// <summary>
     /// Calculates the look angle (Azimuth/Altitude) from observer to aircraft.
-    /// Uses spherical geometry.
     /// </summary>
     private void CalculateLookAngle(Aircraft plane, GeoLocation observer)
     {
@@ -189,10 +209,8 @@ public class PlaneService
         double lon2 = plane.Longitude.Value * Math.PI / 180;
         double dLon = lon2 - lon1;
 
-        // Earth radius in km
         const double R = 6371.0;
 
-        // Haversine distance
         double a = Math.Sin((lat2 - lat1) / 2) * Math.Sin((lat2 - lat1) / 2) +
                    Math.Cos(lat1) * Math.Cos(lat2) *
                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
@@ -201,27 +219,22 @@ public class PlaneService
 
         plane.DistanceKm = groundDistance;
 
-        // Azimuth (bearing)
         double y = Math.Sin(dLon) * Math.Cos(lat2);
         double x = Math.Cos(lat1) * Math.Sin(lat2) - Math.Sin(lat1) * Math.Cos(lat2) * Math.Cos(dLon);
         double azimuth = Math.Atan2(y, x) * 180 / Math.PI;
         plane.Azimuth = (azimuth + 360) % 360;
 
-        // Altitude (elevation angle)
-        // Use geometric altitude if available, otherwise baro
         double altitudeM = plane.GeoAltitude ?? plane.BaroAltitude ?? 10000;
         double altitudeKm = altitudeM / 1000.0;
         
-        // Simple elevation angle: arctan(height / distance)
-        // This is an approximation; for very distant aircraft, you'd need more complex math
-        if (groundDistance > 0.01) // avoid division by zero
+        if (groundDistance > 0.01)
         {
-            double elevation = Math.Atan2(altitudeKm, groundDistance) * 180 / Math.PI;
-            plane.Altitude = elevation;
+            plane.Altitude = Math.Atan2(altitudeKm, groundDistance) * 180 / Math.PI;
         }
         else
         {
-            plane.Altitude = 90; // directly overhead
+            plane.Altitude = 90;
         }
     }
 }
+

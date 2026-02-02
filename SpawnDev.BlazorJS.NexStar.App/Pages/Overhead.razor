@@ -30,6 +30,10 @@
                     <span>🪐</span> Planets
                 </label>
                 <label class="filter-checkbox">
+                    <input type="checkbox" @bind="Filters.ShowMoon" @bind:after="RefreshObjects" />
+                    <span>🌙</span> Moon
+                </label>
+                <label class="filter-checkbox">
                     <input type="checkbox" @bind="Filters.ShowStars" @bind:after="RefreshObjects" />
                     <span>⭐</span> Stars
                 </label>
@@ -53,28 +57,31 @@
         else
         {
             <svg viewBox="-110 -110 220 220" class="sky-map" style="max-width: calc(100vw - 240px); max-height: calc(100vh - 120px); width: auto; height: auto; aspect-ratio: 1 / 1;" @ref="svgElement">
-                <!-- Background -->
+                <!-- Background (fixed, doesn't zoom) -->
                 <circle cx="0" cy="0" r="100" class="horizon-circle" />
                 
-                <!-- Altitude circles -->
-                <circle cx="0" cy="0" r="66.67" class="alt-circle" />
-                <circle cx="0" cy="0" r="33.33" class="alt-circle" />
-                <circle cx="0" cy="0" r="5" class="zenith-marker" />
-                
-                <!-- Cardinal directions -->
-                <line x1="0" y1="-100" x2="0" y2="100" class="cardinal-line" />
-                <line x1="-100" y1="0" x2="100" y2="0" class="cardinal-line" />
+                <!-- Cardinal directions (fixed) -->
                 <text x="0" y="-103" class="cardinal-text">N</text>
                 <text x="0" y="108" class="cardinal-text">S</text>
                 <text x="103" y="3" class="cardinal-text">E</text>
                 <text x="-103" y="3" class="cardinal-text">W</text>
                 
-                <!-- Altitude labels -->
-                <text x="2" y="-68" class="alt-label">30°</text>
-                <text x="2" y="-35" class="alt-label">60°</text>
-                
-                <!-- Objects -->
+                <!-- Zoomable content -->
                 <g transform="translate(0,0) scale(@ZoomLevel)">
+                    <!-- Altitude circles -->
+                    <circle cx="0" cy="0" r="66.67" class="alt-circle" />
+                    <circle cx="0" cy="0" r="33.33" class="alt-circle" />
+                    <circle cx="0" cy="0" r="5" class="zenith-marker" />
+                    
+                    <!-- Cardinal lines -->
+                    <line x1="0" y1="-100" x2="0" y2="100" class="cardinal-line" />
+                    <line x1="-100" y1="0" x2="100" y2="0" class="cardinal-line" />
+                    
+                    <!-- Altitude labels -->
+                    @((MarkupString)$"<text x=\"2\" y=\"-68\" class=\"alt-label\" style=\"font-size: {5 / ZoomLevel}px;\">30°</text>")
+                    @((MarkupString)$"<text x=\"2\" y=\"-35\" class=\"alt-label\" style=\"font-size: {5 / ZoomLevel}px;\">60°</text>")
+                    
+                    <!-- Objects -->
                     @foreach (var obj in VisibleObjects)
                     {
                         var (x, y) = AltAzToXY(obj.Azimuth, obj.Altitude);
@@ -85,10 +92,10 @@
                            @onclick="() => SelectObject(obj)"
                            @onmouseenter="() => HoveredObject = obj"
                            @onmouseleave="() => HoveredObject = null">
-                            <circle cx="@x" cy="@y" r="@size" fill="@color" class="object-marker" />
+                            @((MarkupString)$"<text x=\"{x}\" y=\"{y}\" class=\"object-icon\" style=\"font-size: {size * 2 / ZoomLevel}px;\">{GetObjectIcon(obj)}</text>")
                             @if (ZoomLevel > 1.5 || obj.Category == "Satellite" || obj.Category == "Plane")
                             {
-                                @((MarkupString)$"<text x=\"{x + size + 2}\" y=\"{y + 3}\" class=\"object-label\">{obj.Name}</text>")
+                                @((MarkupString)$"<text x=\"{x + size + 4}\" y=\"{y + 2}\" class=\"object-label\" style=\"font-size: {4 / ZoomLevel}px;\">{obj.Name}</text>")
                             }
                         </g>
                     }
@@ -186,18 +193,45 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Subscribe to data updates from the service
+        OverheadService.OnDataUpdated += OnServiceDataUpdated;
+        
         await RefreshObjects();
+        
+        // Fast refresh timer - sources manage their own rate limiting
         RefreshTimer = new System.Threading.Timer(async _ => 
         {
             await RefreshObjects();
             await InvokeAsync(StateHasChanged);
-        }, null, 10000, 10000);
+        }, null, 2000, 2000);
+    }
+
+    private void OnServiceDataUpdated()
+    {
+        // When any source updates, refresh UI
+        InvokeAsync(() =>
+        {
+            VisibleObjects = OverheadService.GetVisibleObjects(Filters);
+            
+            // Update selected object with fresh data if it still exists
+            if (SelectedObject != null)
+            {
+                var updated = VisibleObjects.FirstOrDefault(o => o.Id == SelectedObject.Id);
+                if (updated != null)
+                {
+                    SelectedObject = updated;
+                }
+            }
+            
+            StateHasChanged();
+        });
     }
 
     private async Task RefreshObjects()
     {
         if (LocationService.Location != null)
         {
+            // This triggers source refreshes (non-blocking) and returns cached data immediately
             VisibleObjects = await OverheadService.GetVisibleObjectsAsync(Filters);
             
             // Get telescope position if connected
@@ -262,6 +296,20 @@
         };
     }
 
+    private string GetObjectIcon(SkyObject obj)
+    {
+        return obj.Category switch
+        {
+            "Satellite" => "🛰️",
+            "Plane" => "✈️",
+            "Planet" => "🪐",
+            "Moon" => "🌙",
+            "Star" => "⭐",
+            "DSO" => "🌌",
+            _ => "●"
+        };
+    }
+
     private void SelectObject(SkyObject obj)
     {
         SelectedObject = obj;
@@ -300,6 +348,7 @@
 
     public void Dispose()
     {
+        OverheadService.OnDataUpdated -= OnServiceDataUpdated;
         RefreshTimer?.Dispose();
     }
 }
@@ -431,19 +480,19 @@
         filter: drop-shadow(0 0 3px rgba(255, 68, 68, 0.8));
     }
 
-    .object-marker {
+    .object-icon {
         cursor: pointer;
-        transition: r 0.1s;
+        text-anchor: middle;
+        dominant-baseline: central;
+        pointer-events: all;
     }
 
-    .sky-object:hover .object-marker {
-        stroke: white;
-        stroke-width: 1;
+    .sky-object:hover .object-icon {
+        filter: drop-shadow(0 0 4px white);
     }
 
-    .sky-object.selected .object-marker {
-        stroke: #ff4444;
-        stroke-width: 2;
+    .sky-object.selected .object-icon {
+        filter: drop-shadow(0 0 6px #ff4444);
     }
 
     .object-label {
